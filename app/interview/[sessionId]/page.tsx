@@ -1,4 +1,6 @@
-import Link from "next/link";
+import QuestionForm from "../../components/QuestionForm";
+import FeedbackList from "../../components/FeedbackList";
+import { sessions } from "../../data/sessions";
 
 interface InterviewSessionPageProps {
     params: Promise<{
@@ -10,47 +12,31 @@ export default async function InterviewSessionPage({
     params,
 }: InterviewSessionPageProps) {
     const { sessionId } = await params;
+    const session = sessions.find((s) => s.id === sessionId);
+
+    if (!session) {
+        return <div>Session not found</div>;
+    }
 
     return (
         <div>
-
             <h1>Interview Session {sessionId}</h1>
 
-            <h1>Question 1</h1>
-
-            <p>
-                Explain React reconciliation.
-            </p>
-
-            <textarea />
-
-            <button>
-                Submit Answer
-            </button>
-
-            <div>
-                <h2>Feedback</h2>
-
-                <p>Score: 7/10</p>
-
-                <h3>Strengths</h3>
-
-                <ul>
-                    <li>Good explanation</li>
-                    <li>Clear examples</li>
-                </ul>
-
-                <h3>Missing</h3>
-
-                <ul>
-                    <li>Virtual DOM discussion</li>
-                </ul>
-            </div>
+            {session.questions.map((question) => (
+                <div key={question.id}>
+                    <QuestionForm questionNumber={question.id} questionText={question.text} />
+                    <div>
+                        <h2>Feedback</h2>
+                        <p>Score: {question.feedback.score}/10</p>
+                        <FeedbackList title="Strengths" items={question.feedback.strengths} />
+                        <FeedbackList title="Missing" items={question.feedback.missing} />
+                    </div>
+                </div>
+            ))}
 
             <button>
                 Next Question
             </button>
-
         </div>
     );
 }
