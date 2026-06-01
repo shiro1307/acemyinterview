@@ -30,6 +30,12 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
 
     const isLastQuestion = (currentIndex === questions.length - 1);
 
+    const feedback = question.feedback ?? {
+        score: 0,
+        strengths: [],
+        missing: []
+    };
+
     return (
         <div>
 
@@ -43,16 +49,16 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
                 feedbackVisible &&
                 <div>
                     <h2>Feedback</h2>
-                    <p>Score: {question.feedback.score}/10</p>
+                    <p>Score: {feedback.score}/10</p>
 
                     <FeedbackList
                         title="Strengths"
-                        items={question.feedback.strengths}
+                        items={feedback.strengths}
                     />
 
                     <FeedbackList
                         title="Missing"
-                        items={question.feedback.missing}
+                        items={feedback.missing}
                     />
                 </div>
             }

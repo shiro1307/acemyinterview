@@ -1,85 +1,42 @@
-import { sessions } from "../../data/sessions";
+import { supabase } from "../../lib/supabase";
 
 interface SessionPageProps {
-    params: Promise<{
-        sessionId: string;
-    }>;
+    params: Promise<{ sessionId: string }>;
 }
 
-export default async function SessionPage({
-    params,
-}: SessionPageProps) {
+export default async function SessionPage({ params }: SessionPageProps) {
     const { sessionId } = await params;
 
-    const session = sessions.find(
-        (s) => s.id === sessionId
-    );
+    // 1. fetch session
+    const { data: session, error } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("id", sessionId)
+        .single();
 
-    if (!session) {
+    if (!session || error) {
         return <div>Session not found</div>;
     }
 
+    // 2. fetch questions
+    const { data: questions } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("session_id", sessionId);
+
     const averageScore =
-        session.questions.reduce(
-            (sum, q) => sum + q.feedback.score,
-            0
-        ) / session.questions.length;
+        (questions?.reduce((sum, q) => sum + (q.score ?? 0), 0) ?? 0) /
+        (questions?.length || 1);
 
     return (
         <div>
             <h1>{session.role} - Interview Review</h1>
 
-            <p>
-                Average Score: {averageScore.toFixed(1)}
-            </p>
+            <p>Average Score: {averageScore.toFixed(1)}</p>
 
-            {session.questions.map((question) => (
-                <div key={question.id}>
-                    <h2>
-                        Question {question.id}
-                    </h2>
-
-                    <p>{question.text}</p>
-
-                    <p>
-                        Score:
-                        {question.feedback.score}/10
-                    </p>
-
-                    <p>
-                        <strong>Your Answer:</strong>
-                    </p>
-
-                    <p>{question.answer}</p>
-
-                    <p>
-                        <strong>Strengths</strong>
-                    </p>
-
-                    <ul>
-                        {question.feedback.strengths.map(
-                            (strength) => (
-                                <li key={strength}>
-                                    {strength}
-                                </li>
-                            )
-                        )}
-                    </ul>
-
-                    <p>
-                        <strong>Missing</strong>
-                    </p>
-
-                    <ul>
-                        {question.feedback.missing.map(
-                            (item) => (
-                                <li key={item}>
-                                    {item}
-                                </li>
-                            )
-                        )}
-                    </ul>
-
+            {questions?.map((q) => (
+                <div key={q.id}>
+                    <h2>{q.text}</h2>
                 </div>
             ))}
         </div>
