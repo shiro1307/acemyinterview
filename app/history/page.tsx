@@ -1,8 +1,19 @@
 import SessionListItem from "../components/SessionListItem";
 import { sessions } from "../data/sessions";
+import { supabase } from "../lib/supabase";
 
-export default function HistoryPage() {
+export default async function HistoryPage() {
+    const res = await supabase.from("sessions").select("*");
 
+    console.log(res);
+
+    return (
+        <pre>{JSON.stringify(res, null, 2)}</pre>
+    );
+}
+
+/*
+export default async function HistoryPage() {
     return (
         <>
             Interview history placeholder
@@ -18,3 +29,4 @@ export default function HistoryPage() {
         </>
     );
 }
+*/
