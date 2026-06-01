@@ -11,7 +11,7 @@ export default function HistoryPage() {
             <ol>
                 {
                     sessions.map((session) => (
-                        <SessionListItem key={session.id} id={Number(session.id)} role={session.role} />
+                        <SessionListItem key={session.id} session={session} />
                     ))
                 }
             </ol>

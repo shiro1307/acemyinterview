@@ -6,40 +6,80 @@ interface SessionPageProps {
     }>;
 }
 
-export default async function SessionPage({ params }: SessionPageProps) {
+export default async function SessionPage({
+    params,
+}: SessionPageProps) {
     const { sessionId } = await params;
-    const session = sessions.find((s) => s.id === sessionId);
+
+    const session = sessions.find(
+        (s) => s.id === sessionId
+    );
 
     if (!session) {
         return <div>Session not found</div>;
     }
 
+    const averageScore =
+        session.questions.reduce(
+            (sum, q) => sum + q.feedback.score,
+            0
+        ) / session.questions.length;
+
     return (
         <div>
-            <h1>{session.role} Interview Review</h1>
+            <h1>{session.role} - Interview Review</h1>
+
+            <p>
+                Average Score: {averageScore.toFixed(1)}
+            </p>
 
             {session.questions.map((question) => (
-                <div key={question.id} style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "20px" }}>
-                    <h2>Question {question.id}</h2>
+                <div key={question.id}>
+                    <h2>
+                        Question {question.id}
+                    </h2>
+
                     <p>{question.text}</p>
 
-                    <h3>Your Answer</h3>
+                    <p>
+                        Score:
+                        {question.feedback.score}/10
+                    </p>
+
+                    <p>
+                        <strong>Your Answer:</strong>
+                    </p>
+
                     <p>{question.answer}</p>
 
-                    <h3>Feedback</h3>
-                    <p>Score: {question.feedback.score}/10</p>
-                    <h4>Strengths</h4>
+                    <p>
+                        <strong>Strengths</strong>
+                    </p>
+
                     <ul>
-                        {question.feedback.strengths.map((strength, idx) => (
-                            <li key={idx}>{strength}</li>
-                        ))}
+                        {question.feedback.strengths.map(
+                            (strength) => (
+                                <li key={strength}>
+                                    {strength}
+                                </li>
+                            )
+                        )}
                     </ul>
-                    <h4>Missing</h4>
+
+                    <p>
+                        <strong>Missing</strong>
+                    </p>
+
                     <ul>
-                        {question.feedback.missing.map((missing, idx) => (
-                            <li key={idx}>{missing}</li>
-                        ))}
+                        {question.feedback.missing.map(
+                            (item) => (
+                                <li key={item}>
+                                    {item}
+                                </li>
+                            )
+                        )}
                     </ul>
+
                 </div>
             ))}
         </div>

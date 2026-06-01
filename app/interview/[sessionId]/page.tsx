@@ -1,6 +1,5 @@
-import QuestionForm from "../../components/QuestionForm";
-import FeedbackList from "../../components/FeedbackList";
 import { sessions } from "../../data/sessions";
+import InterviewQuestions from "@/app/components/InterviewQuestions";
 
 interface InterviewSessionPageProps {
     params: Promise<{
@@ -12,7 +11,10 @@ export default async function InterviewSessionPage({
     params,
 }: InterviewSessionPageProps) {
     const { sessionId } = await params;
-    const session = sessions.find((s) => s.id === sessionId);
+
+    const session = sessions.find(
+        (s) => s.id === sessionId
+    );
 
     if (!session) {
         return <div>Session not found</div>;
@@ -22,21 +24,10 @@ export default async function InterviewSessionPage({
         <div>
             <h1>Interview Session {sessionId}</h1>
 
-            {session.questions.map((question) => (
-                <div key={question.id}>
-                    <QuestionForm questionNumber={question.id} questionText={question.text} />
-                    <div>
-                        <h2>Feedback</h2>
-                        <p>Score: {question.feedback.score}/10</p>
-                        <FeedbackList title="Strengths" items={question.feedback.strengths} />
-                        <FeedbackList title="Missing" items={question.feedback.missing} />
-                    </div>
-                </div>
-            ))}
-
-            <button>
-                Next Question
-            </button>
+            <InterviewQuestions
+                questions={session.questions}
+                sessionId={session.id}
+            />
         </div>
     );
 }

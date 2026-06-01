@@ -1,15 +1,18 @@
 import Link from "next/link";
+import { Session, Question } from "@/app/types";
 
-interface SessionListItemProps {
-    id: number;
-    role: string;
-}
+export default function SessionListItem({ session }: { session: Session }) {
 
-export default function SessionListItem({ id, role }: SessionListItemProps) {
+    const averageScore =
+        session.questions.reduce(
+            (sum: number, q: Question) => sum + q.feedback.score,
+            0
+        ) / session.questions.length;
+
     return (
         <li>
-            {id} - {role}:
-            <Link href={`/session/${id}`}> Go to session {id}?</Link>
+            {session.role} (Avg. score - {averageScore}):
+            <Link href={`/session/${session.id}`}>Go to session {session.id}?</Link>
         </li>
     );
 }
