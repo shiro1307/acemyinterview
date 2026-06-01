@@ -25,32 +25,48 @@ export default function RoleSelector({ roles }: RoleSelectorProps) {
             .single();
 
         if (sessionError || !session) {
-            console.error(sessionError);
+            console.error("Session creation error:", sessionError);
             return;
         }
 
-        // 2. Create dummy questions linked to session
-        const { error: questionError } = await supabase
+        // 2. Fetch global questions (filter by role, limit 5)
+        const { data: allQuestions, error: fetchError } = await supabase
             .from("questions")
-            .insert([
-                {
-                    id: crypto.randomUUID(),
-                    session_id: session.id,
-                    text: "Explain React reconciliation",
-                },
-                {
-                    id: crypto.randomUUID(),
-                    session_id: session.id,
-                    text: "What is event bubbling?",
-                },
-            ]);
+            .select("id")
+            .eq("role", role)
+            .limit(100);
 
-        if (questionError) {
-            console.error(questionError);
+        if (fetchError || !allQuestions) {
+            console.error("Question fetch error:", fetchError);
             return;
         }
 
-        // 3. Navigate to interview
+        // 3. Select random subset (up to 5)
+        const selectedQuestionIds = allQuestions
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 5)
+            .map((q) => q.id);
+
+        // 4. Insert into session_questions with order_index
+        const sessionQuestionsToInsert = selectedQuestionIds.map(
+            (questionId, index) => ({
+                id: crypto.randomUUID(),
+                session_id: session.id,
+                question_id: questionId,
+                order_index: index + 1,
+            })
+        );
+
+        const { error: insertError } = await supabase
+            .from("session_questions")
+            .insert(sessionQuestionsToInsert);
+
+        if (insertError) {
+            console.error("session_questions insert error:", insertError);
+            return;
+        }
+
+        // 5. Navigate to interview
         router.push(`/interview/${session.id}`);
     }
 

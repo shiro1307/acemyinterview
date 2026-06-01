@@ -9,6 +9,13 @@ export type Question = {
     };
 };
 
+export type SessionQuestion = {
+    id: string;
+    session_id: string;
+    question_id: string;
+    order_index: number;
+};
+
 export type Session = {
     id: string;
     role: string;
