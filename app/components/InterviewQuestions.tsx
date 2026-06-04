@@ -3,39 +3,28 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import QuestionForm from "./QuestionForm";
-import FeedbackList from "./FeedbackList";
 import { Question } from "@/app/types";
-import { submitAnswer } from "../lib/actions/interviews";
-
-interface FeedbackState {
-    score: number;
-    strengths: string[];
-    missing: string[];
-    modelAnswer?: string;
-}
+import { submitAnswer, completeInterview } from "../lib/actions/interviews";
 
 export default function InterviewQuestions({ questions, sessionId }: { questions: Question[], sessionId: string }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [feedbackVisible, setFeedbackVisible] = useState(false);
-    const [currentFeedback, setCurrentFeedback] = useState<FeedbackState | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFinishing, setIsFinishing] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
     const question = questions[currentIndex];
+    const isLastQuestion = currentIndex === questions.length - 1;
     const router = useRouter();
 
     async function handleAnswerSubmit(answerText: string) {
         setIsSubmitting(true);
         setSubmitError("");
         try {
-            const feedback = await submitAnswer(sessionId, question.id, answerText);
-            setCurrentFeedback({
-                score: feedback.score,
-                strengths: feedback.strengths,
-                missing: feedback.missing,
-                modelAnswer: feedback.modelAnswer,
-            });
-            setFeedbackVisible(true);
+            await submitAnswer(sessionId, question.id, answerText);
+
+            if (!isLastQuestion) {
+                setCurrentIndex((prev) => prev + 1);
+            }
         } catch (error: unknown) {
             console.error("Failed to submit answer:", error);
             const errMsg = error instanceof Error ? error.message : "Something went wrong while submitting answer";
@@ -45,67 +34,72 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
         }
     }
 
-    function nextQuestion() {
-        setCurrentFeedback(null);
-        setFeedbackVisible(false);
+    async function handleFinishInterview(answerText: string) {
+        setIsSubmitting(true);
         setSubmitError("");
-        setCurrentIndex((prev) => prev + 1);
+        try {
+            // Submit the last answer first
+            await submitAnswer(sessionId, question.id, answerText);
+
+            // Then complete the interview (generates feedback + redirects)
+            setIsFinishing(true);
+            await completeInterview(sessionId);
+        } catch (error: unknown) {
+            // redirect() throws a NEXT_REDIRECT error — let it propagate
+            if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+                throw error;
+            }
+            console.error("Failed to finish interview:", error);
+            const errMsg = error instanceof Error ? error.message : "Something went wrong";
+            setSubmitError(errMsg);
+            setIsFinishing(false);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
-    function finishInterview() {
-        router.push(`/session/${sessionId}`);
+    async function handleSkipAndFinish() {
+        setIsFinishing(true);
+        setSubmitError("");
+        try {
+            await completeInterview(sessionId);
+        } catch (error: unknown) {
+            if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+                throw error;
+            }
+            console.error("Failed to finish interview:", error);
+            const errMsg = error instanceof Error ? error.message : "Something went wrong";
+            setSubmitError(errMsg);
+            setIsFinishing(false);
+        }
     }
 
-    const isLastQuestion = (currentIndex === questions.length - 1);
+    if (isFinishing) {
+        return <p>Finishing interview and generating results...</p>;
+    }
 
     return (
         <div>
-            {isSubmitting && <p>Evaluating your answer...</p>}
+            {isSubmitting && <p>Submitting...</p>}
             {submitError && <p>Error: {submitError}</p>}
 
-            {!feedbackVisible && !isSubmitting && (
+            {!isSubmitting && (
                 <QuestionForm
                     key={question.id}
                     questionNumber={currentIndex + 1}
+                    totalQuestions={questions.length}
                     questionText={question.text}
                     submitQuestion={handleAnswerSubmit}
+                    isLastQuestion={isLastQuestion}
+                    onFinishInterview={handleFinishInterview}
                 />
             )}
 
-            {
-                feedbackVisible && currentFeedback &&
-                <div>
-                    <h2>Feedback</h2>
-                    <p>Score: {currentFeedback.score}/10</p>
-
-                    <FeedbackList
-                        title="Strengths"
-                        items={currentFeedback.strengths}
-                    />
-
-                    <FeedbackList
-                        title="Missing"
-                        items={currentFeedback.missing}
-                    />
-
-                    {currentFeedback.modelAnswer && (
-                        <div>
-                            <h3>Model Answer Guide</h3>
-                            <p>{currentFeedback.modelAnswer}</p>
-                        </div>
-                    )}
-                </div>
-            }
-
-            {
-                feedbackVisible &&
-                <button
-                    onClick={!isLastQuestion ? nextQuestion : finishInterview}
-                >
-                    {!isLastQuestion ? <>Next Question</> : <>Finish Interview</>}
+            {!isSubmitting && (
+                <button onClick={handleSkipAndFinish}>
+                    Finish Interview Early
                 </button>
-            }
-
+            )}
         </div>
     );
 }

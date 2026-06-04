@@ -4,24 +4,34 @@ import { useState } from "react";
 
 interface QuestionFormProps {
     questionNumber: number;
+    totalQuestions: number;
     questionText: string;
     submitQuestion: (answerText: string) => void;
+    isLastQuestion: boolean;
+    onFinishInterview: (answerText: string) => void;
 }
 
 export default function QuestionForm({
     questionNumber,
     questionText,
-    submitQuestion
+    totalQuestions,
+    submitQuestion,
+    isLastQuestion,
+    onFinishInterview,
 }: QuestionFormProps) {
     const [answerText, setAnswerText] = useState("");
 
     const handleSubmit = () => {
-        submitQuestion(answerText);
+        if (isLastQuestion) {
+            onFinishInterview(answerText);
+        } else {
+            submitQuestion(answerText);
+        }
     };
 
     return (
         <div>
-            <h1>Question {questionNumber}</h1>
+            <h1>Question {questionNumber} out of {totalQuestions}</h1>
             <p>{questionText}</p>
             <textarea
                 value={answerText}
@@ -32,7 +42,7 @@ export default function QuestionForm({
             />
             <br />
             <button onClick={handleSubmit} disabled={!answerText.trim()}>
-                Submit Answer
+                {isLastQuestion ? "Submit & Finish Interview" : "Submit Answer"}
             </button>
         </div>
     );

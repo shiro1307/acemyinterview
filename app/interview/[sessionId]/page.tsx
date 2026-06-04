@@ -88,11 +88,6 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
         id: questionMap[sq.question_id]?.id || sq.question_id,
         text: questionMap[sq.question_id]?.text || "Question not found",
         answer: "",
-        feedback: {
-            score: 0,
-            strengths: [],
-            missing: [],
-        },
     }));
 
     const questionError = sessionQuestionsError || questionsError;
