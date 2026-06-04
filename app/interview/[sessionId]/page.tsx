@@ -1,5 +1,6 @@
 import InterviewQuestions from "@/app/components/InterviewQuestions";
-import { supabase } from "../../lib/supabase";
+import { getUser } from "../../lib/supabase/server";
+import { createClient } from "../../lib/supabase/server";
 import { Question } from "@/app/types";
 
 interface InterviewSessionPageProps {
@@ -7,18 +8,45 @@ interface InterviewSessionPageProps {
 }
 
 export default async function InterviewSessionPage({ params }: InterviewSessionPageProps) {
-    const { sessionId } = await params;
+    const user = await getUser();
 
+    if (!user) {
+        return <div>Please log in to continue</div>;
+    }
+
+    const { sessionId } = await params;
+    const supabase = await createClient();
+
+    // Fetch session and verify ownership
     const { data: session, error: sessionError } = await supabase
         .from("sessions")
         .select("*")
         .eq("id", sessionId)
+        .eq("user_id", user.id)
         .single();
+
+    if (sessionError || !session) {
+        return <div>Session not found or access denied</div>;
+    }
+
+    interface SessionQuestionData {
+        id: string;
+        session_id: string;
+        question_id: string;
+        order_index: number;
+    }
+
+    interface DbQuestionData {
+        id: string;
+        text: string;
+        role: string | null;
+        created_at: string | null;
+    }
 
     // Step 1: Fetch session_questions for this session
     const { data: sessionQuestionsData, error: sessionQuestionsError } = await supabase
         .from("session_questions")
-        .select("*")
+        .select("id, session_id, question_id, order_index")
         .eq("session_id", sessionId)
         .order("order_index", { ascending: true });
 
@@ -26,20 +54,22 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
         console.error("sessionQuestionsError:", sessionQuestionsError);
     }
 
+    const typedSessionQuestions = (sessionQuestionsData as SessionQuestionData[] | null) ?? [];
+
     // Step 2: Extract question IDs
-    const questionIds = sessionQuestionsData?.map((sq: any) => sq.question_id) ?? [];
+    const questionIds = typedSessionQuestions.map((sq) => sq.question_id);
 
     // Step 3: Fetch all questions with those IDs
-    let questionsData: any[] = [];
+    let questionsData: DbQuestionData[] = [];
     let questionsError = null;
 
     if (questionIds.length > 0) {
         const result = await supabase
             .from("questions")
-            .select("*")
+            .select("id, text, role, created_at")
             .in("id", questionIds);
 
-        questionsData = result.data ?? [];
+        questionsData = (result.data as DbQuestionData[] | null) ?? [];
         questionsError = result.error;
     }
 
@@ -48,13 +78,13 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     }
 
     // Step 4: Create lookup map
-    const questionMap: Record<string, any> = {};
-    questionsData.forEach((q: any) => {
+    const questionMap: Record<string, DbQuestionData> = {};
+    questionsData.forEach((q) => {
         questionMap[q.id] = q;
     });
 
     // Step 5: Join client-side, preserving order from session_questions
-    const questions: Question[] = sessionQuestionsData?.map((sq: any) => ({
+    const questions: Question[] = typedSessionQuestions.map((sq) => ({
         id: questionMap[sq.question_id]?.id || sq.question_id,
         text: questionMap[sq.question_id]?.text || "Question not found",
         answer: "",
@@ -63,19 +93,13 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
             strengths: [],
             missing: [],
         },
-    })) ?? [];
+    }));
 
     const questionError = sessionQuestionsError || questionsError;
 
-    if (sessionError || !session) {
-        return <div>Session not found</div>;
-    }
-
     if (questionError) {
-        return <div>Error loading questions: {(questionError as any)?.message || "Unknown error"}</div>;
+        return <div>Error loading questions: {questionError.message || "Unknown error"}</div>;
     }
-
-    console.log("Session questions loaded:", questions);
 
     return (
         <div>

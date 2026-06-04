@@ -5,7 +5,7 @@ export default async function Navigation() {
     const user = await getUser();
 
     return (
-        <nav style={{ borderBottom: "1px solid #ccc", padding: "10px", marginBottom: "20px" }}>
+        <nav>
             <Link href="/">Home</Link>
             {" | "}
             <Link href="/interview">Interview</Link>

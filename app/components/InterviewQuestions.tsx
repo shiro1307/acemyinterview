@@ -5,23 +5,51 @@ import { useState } from "react";
 import QuestionForm from "./QuestionForm";
 import FeedbackList from "./FeedbackList";
 import { Question } from "@/app/types";
+import { submitAnswer } from "../lib/actions/interviews";
+
+interface FeedbackState {
+    score: number;
+    strengths: string[];
+    missing: string[];
+    modelAnswer?: string;
+}
 
 export default function InterviewQuestions({ questions, sessionId }: { questions: Question[], sessionId: string }) {
     const [currentIndex, setCurrentIndex] = useState(0);
-
     const [feedbackVisible, setFeedbackVisible] = useState(false);
+    const [currentFeedback, setCurrentFeedback] = useState<FeedbackState | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
 
     const question = questions[currentIndex];
-
     const router = useRouter();
 
-    function submitQuestion() {
-        setFeedbackVisible(true)
+    async function handleAnswerSubmit(answerText: string) {
+        setIsSubmitting(true);
+        setSubmitError("");
+        try {
+            const feedback = await submitAnswer(sessionId, question.id, answerText);
+            setCurrentFeedback({
+                score: feedback.score,
+                strengths: feedback.strengths,
+                missing: feedback.missing,
+                modelAnswer: feedback.modelAnswer,
+            });
+            setFeedbackVisible(true);
+        } catch (error: unknown) {
+            console.error("Failed to submit answer:", error);
+            const errMsg = error instanceof Error ? error.message : "Something went wrong while submitting answer";
+            setSubmitError(errMsg);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     function nextQuestion() {
-        setCurrentIndex((prev) => prev + 1)
-        setFeedbackVisible(false)
+        setCurrentFeedback(null);
+        setFeedbackVisible(false);
+        setSubmitError("");
+        setCurrentIndex((prev) => prev + 1);
     }
 
     function finishInterview() {
@@ -30,36 +58,42 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
 
     const isLastQuestion = (currentIndex === questions.length - 1);
 
-    const feedback = question.feedback ?? {
-        score: 0,
-        strengths: [],
-        missing: []
-    };
-
     return (
         <div>
+            {isSubmitting && <p>Evaluating your answer...</p>}
+            {submitError && <p>Error: {submitError}</p>}
 
-            <QuestionForm
-                questionNumber={currentIndex + 1}
-                questionText={question.text}
-                submitQuestion={submitQuestion}
-            />
+            {!feedbackVisible && !isSubmitting && (
+                <QuestionForm
+                    key={question.id}
+                    questionNumber={currentIndex + 1}
+                    questionText={question.text}
+                    submitQuestion={handleAnswerSubmit}
+                />
+            )}
 
             {
-                feedbackVisible &&
+                feedbackVisible && currentFeedback &&
                 <div>
                     <h2>Feedback</h2>
-                    <p>Score: {feedback.score}/10</p>
+                    <p>Score: {currentFeedback.score}/10</p>
 
                     <FeedbackList
                         title="Strengths"
-                        items={feedback.strengths}
+                        items={currentFeedback.strengths}
                     />
 
                     <FeedbackList
                         title="Missing"
-                        items={feedback.missing}
+                        items={currentFeedback.missing}
                     />
+
+                    {currentFeedback.modelAnswer && (
+                        <div>
+                            <h3>Model Answer Guide</h3>
+                            <p>{currentFeedback.modelAnswer}</p>
+                        </div>
+                    )}
                 </div>
             }
 
