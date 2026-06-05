@@ -3,12 +3,9 @@
 import { createClient } from "../supabase/server";
 import { getCurrentUser } from "./auth";
 import { redirect } from "next/navigation";
+import { evaluateInterview, QAPair } from "../ai/evaluate";
 
 // --- Helpers ---
-
-function randomInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
 async function getSupabase() {
   const user = await getCurrentUser();
@@ -81,47 +78,50 @@ export async function submitAnswer(sessionId: string, questionId: string, answer
   return { success: true };
 }
 
+function buildOrderedPairs(
+  sessionQuestions: { question_id: string; order_index: number }[],
+  questions: { id: string; text: string }[],
+  answers: { question_id: string; text: string }[]
+): QAPair[] {
+  const textOf = Object.fromEntries(questions.map((q) => [q.id, q.text]));
+  const answerOf = Object.fromEntries(answers.map((a) => [a.question_id, a.text]));
+
+  return sessionQuestions
+    .filter((sq) => answerOf[sq.question_id])
+    .map((sq) => ({
+      questionId: sq.question_id,
+      questionText: textOf[sq.question_id] ?? "Unknown question",
+      answerText: answerOf[sq.question_id],
+    }));
+}
+
 export async function completeInterview(sessionId: string) {
   const { supabase } = await verifySessionOwner(sessionId);
 
-  // Fetch questions + answers in parallel
-  const [sqResult, ansResult] = await Promise.all([
-    supabase.from("session_questions").select("question_id").eq("session_id", sessionId),
-    supabase.from("answers").select("question_id").eq("session_id", sessionId),
+  const [sqResult, ansResult, sessionResult] = await Promise.all([
+    supabase
+      .from("session_questions")
+      .select("question_id, order_index")
+      .eq("session_id", sessionId)
+      .order("order_index", { ascending: true }),
+    supabase.from("answers").select("question_id, text").eq("session_id", sessionId),
+    supabase.from("sessions").select("role").eq("id", sessionId).single(),
   ]);
   if (sqResult.error) throw new Error("Failed to fetch session questions");
   if (ansResult.error) throw new Error("Failed to fetch answers");
+  if (sessionResult.error || !sessionResult.data) throw new Error("Failed to fetch session");
 
   const questionIds = (sqResult.data ?? []).map((sq) => sq.question_id);
-  const answeredIds = new Set((ansResult.data ?? []).map((a) => a.question_id));
-
-  // Fetch question texts
   const { data: questions } = questionIds.length > 0
     ? await supabase.from("questions").select("id, text").in("id", questionIds)
     : { data: [] };
 
-  const textOf = Object.fromEntries((questions ?? []).map((q) => [q.id, q.text]));
+  const pairs = buildOrderedPairs(sqResult.data ?? [], questions ?? [], ansResult.data ?? []);
+  const { overallScore, summary, questionEvaluations } = await evaluateInterview(
+    sessionResult.data.role,
+    pairs
+  );
 
-  // Build dummy evaluation (one entry per answered question)
-  const totalCount = questionIds.length;
-  const answeredCount = answeredIds.size;
-  const overallScore = randomInt(6, 8);
-
-  const summary = answeredCount === totalCount
-    ? `Completed all ${totalCount} questions. Solid performance overall.`
-    : `Completed ${answeredCount}/${totalCount} questions. Good effort on the attempted questions.`;
-
-  const questionEvaluations = questionIds
-    .filter((id) => answeredIds.has(id))
-    .map((id) => ({
-      questionId: id,
-      questionText: textOf[id] ?? "Unknown question",
-      score: randomInt(6, 9),
-      feedback: "Demonstrated understanding of core concepts. Could add more specific examples.",
-      idealAnswer: `A strong answer would cover the key aspects of "${textOf[id] ?? "the topic"}" with concrete examples and clear structure.`,
-    }));
-
-  // Save feedback + mark session completed
   const { error: fbErr } = await supabase.from("feedback").insert({
     session_id: sessionId,
     overall_score: overallScore,

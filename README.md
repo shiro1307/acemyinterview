@@ -82,6 +82,7 @@ Create a `.env.local` file:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_project_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+GOOGLE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
 Start the development server:
