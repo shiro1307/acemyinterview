@@ -2,31 +2,7 @@
 
 ## Overview
 
-The database follows a refactored architecture where **questions are decoupled from sessions**. This enables a reusable global question bank where sessions can select a flexible subset of questions via the `session_questions` join table.
-
----
-
-## Design Change
-
-### Before
-
-- Questions were session-bound (`questions.session_id` foreign key)
-- Questions couldn't be reused across sessions
-- Duplication if same question was used in multiple sessions
-
-### After
-
-- Questions are **global** (no session dependency)
-- Sessions select a subset via **join table**
-- Each session has independent question selection
-- Questions are reusable and shareable
-
-### Why?
-
-- **Flexibility**: Select different question subsets per session (random, by role, etc.)
-- **Reusability**: One question can be used in many sessions
-- **Scalability**: Global question bank grows independently from sessions
-- **No duplication**: Question text stored once
+The database uses a **global question bank** decoupled from sessions. Sessions select a subset of questions via the `session_questions` join table. Feedback is stored **once per session** (not per answer).
 
 ---
 
@@ -35,17 +11,15 @@ The database follows a refactored architecture where **questions are decoupled f
 ```
 User selects role
      ↓
-Create session
+Create session (sessions)
      ↓
-Fetch questions from global bank (filtered by role)
+Pick random questions from global bank → session_questions
      ↓
-Select random subset (e.g., 5 questions)
+User answers → answers
      ↓
-Insert into session_questions (with order_index)
+completeInterview() → Gemini evaluation → feedback (one row per session)
      ↓
-User answers questions
-     ↓
-Insert answers + feedback
+Review page reads feedback.evaluation_json (v2)
 ```
 
 ---
@@ -54,40 +28,117 @@ Insert answers + feedback
 
 ### sessions
 
-- id (text, PK)
-- role (text) — role selected by user
-- created_at (timestamp)
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | UUID |
+| user_id | uuid (FK) | Owner |
+| role | text | Role selected for interview |
+| status | text | `active`, `completed`, or `abandoned` |
+| created_at | timestamptz | |
 
-### questions (GLOBAL BANK)
+### questions (global bank)
 
-- id (text, PK)
-- text (text) — question prompt
-- role (text, optional) — category/filter by role
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | UUID |
+| text | text | Question prompt |
+| role | text | Filter by interview role |
+| created_at | timestamptz | Optional |
 
-### session_questions (JOIN TABLE)
+### session_questions (join table)
 
-- id (text, PK)
-- session_id (text, FK → sessions.id)
-- question_id (text, FK → questions.id)
-- order_index (int) — question order within session
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | UUID |
+| session_id | text (FK → sessions.id) | |
+| question_id | text (FK → questions.id) | |
+| order_index | int | Question order within session |
 
 ### answers
 
-- id (text, PK)
-- session_id (text, FK → sessions.id)
-- question_id (text, FK → questions.id)
-- text (text) — user's answer
-- created_at (timestamp)
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | UUID |
+| session_id | text (FK → sessions.id) | |
+| question_id | text (FK → questions.id) | |
+| text | text | User's answer |
+| created_at | timestamptz | |
 
 ### feedback
 
-- id (text, PK)
-- answer_id (text, FK → answers.id)
-- score (int4) — 0-10 rating
-- strengths (text[]) — what was good
-- missing_points (text[]) — what was missing
-- model_answer (text) — reference answer
-- created_at (timestamp)
+One row per completed session. No schema migration is required when the app feedback format changes — rich data lives in `evaluation_json` (jsonb).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | UUID |
+| session_id | text (FK → sessions.id) | Unique per session |
+| overall_score | int4 | 0–10 |
+| summary | text | Short overall assessment |
+| evaluation_json | jsonb | Structured v2 payload (see below) |
+| created_at | timestamptz | |
+
+---
+
+## evaluation_json v2
+
+The app defines this shape. It is not enforced at the database level.
+
+```json
+{
+  "version": 2,
+  "dimensions": {
+    "communication": 7,
+    "technicalDepth": 6,
+    "problemSolving": 8
+  },
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "improvements": ["..."],
+  "verdict": "pass",
+  "verdictRationale": "...",
+  "studyTopics": ["..."],
+  "completeness": {
+    "questionsTotal": 5,
+    "questionsAnswered": 4,
+    "shortAnswerCount": 1,
+    "signal": "partial"
+  },
+  "questionEvaluations": [
+    {
+      "questionId": "...",
+      "questionText": "...",
+      "score": 7,
+      "whatWorked": "...",
+      "whatMissed": "...",
+      "howToImprove": "...",
+      "idealAnswer": "...",
+      "tags": ["correct_core", "too_shallow"],
+      "conceptsMentioned": ["..."],
+      "conceptsMissed": ["..."]
+    }
+  ]
+}
+```
+
+**Verdict values:** `strong_pass`, `pass`, `borderline`, `needs_work`, `not_ready`
+
+**Tag values:** `good_structure`, `strong_examples`, `correct_core`, `too_shallow`, `missed_edge_case`, `factually_incorrect`, `unclear_explanation`, `incomplete`
+
+**Completeness signals:** `complete`, `partial`, `minimal_effort` (computed in app code, stored for display)
+
+---
+
+## Fresh slate SQL
+
+When upgrading from an older feedback format, wipe stale data in the Supabase SQL Editor:
+
+```sql
+-- Feedback only
+DELETE FROM feedback;
+
+-- Full interview reset (keeps questions bank)
+TRUNCATE TABLE feedback, answers, session_questions, sessions CASCADE;
+```
 
 ---
 
@@ -100,15 +151,15 @@ SELECT session_questions.*, questions.*
 FROM session_questions
 JOIN questions ON questions.id = session_questions.question_id
 WHERE session_questions.session_id = ?
-ORDER BY session_questions.order_index ASC
+ORDER BY session_questions.order_index ASC;
 ```
 
-### Insert selected questions into session
+### Fetch session with feedback (history)
 
 ```sql
-INSERT INTO session_questions (id, session_id, question_id, order_index)
-VALUES
-  (uuid1, ?, questionId1, 1),
-  (uuid2, ?, questionId2, 2),
-  ...
+SELECT sessions.*, feedback.overall_score
+FROM sessions
+LEFT JOIN feedback ON feedback.session_id = sessions.id
+WHERE sessions.user_id = ?
+ORDER BY sessions.created_at DESC;
 ```

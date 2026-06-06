@@ -4,6 +4,7 @@ import { createClient } from "../supabase/server";
 import { getCurrentUser } from "./auth";
 import { redirect } from "next/navigation";
 import { evaluateInterview, QAPair } from "../ai/evaluate";
+import { computeCompleteness } from "../feedback/completeness";
 
 // --- Helpers ---
 
@@ -116,17 +117,20 @@ export async function completeInterview(sessionId: string) {
     ? await supabase.from("questions").select("id, text").in("id", questionIds)
     : { data: [] };
 
-  const pairs = buildOrderedPairs(sqResult.data ?? [], questions ?? [], ansResult.data ?? []);
-  const { overallScore, summary, questionEvaluations } = await evaluateInterview(
+  const answers = ansResult.data ?? [];
+  const completeness = computeCompleteness(questionIds, answers);
+  const pairs = buildOrderedPairs(sqResult.data ?? [], questions ?? [], answers);
+  const { overallScore, summary, evaluationJson } = await evaluateInterview(
     sessionResult.data.role,
-    pairs
+    pairs,
+    completeness
   );
 
   const { error: fbErr } = await supabase.from("feedback").insert({
     session_id: sessionId,
     overall_score: overallScore,
     summary,
-    evaluation_json: { questionEvaluations },
+    evaluation_json: evaluationJson,
   });
   if (fbErr) throw new Error(`Failed to save feedback: ${fbErr.message}`);
 

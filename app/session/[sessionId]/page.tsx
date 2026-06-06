@@ -1,6 +1,11 @@
 import { getUser } from "../../lib/supabase/server";
 import { createClient } from "../../lib/supabase/server";
-import { SessionFeedback, QuestionEvaluation } from "@/app/types";
+import { SessionFeedback } from "@/app/types";
+import CompletenessBanner from "@/app/components/CompletenessBanner";
+import SessionSummaryCard from "@/app/components/SessionSummaryCard";
+import FeedbackList from "@/app/components/FeedbackList";
+import ScoreRubric from "@/app/components/ScoreRubric";
+import QuestionReviewCard from "@/app/components/QuestionReviewCard";
 
 interface SessionPageProps {
     params: Promise<{ sessionId: string }>;
@@ -16,7 +21,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
     const { sessionId } = await params;
     const supabase = await createClient();
 
-    // Fetch session and verify ownership
     const { data: session, error: sessionError } = await supabase
         .from("sessions")
         .select("*")
@@ -28,7 +32,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
         return <div>Session not found or access denied</div>;
     }
 
-    // Fetch answers for display
     const { data: answersData, error: ansError } = await supabase
         .from("answers")
         .select("id, question_id, text")
@@ -43,7 +46,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
         answerMap.set(a.question_id, a.text);
     });
 
-    // Fetch session-level feedback
     const { data: feedbackData, error: fbError } = await supabase
         .from("feedback")
         .select("*")
@@ -55,37 +57,52 @@ export default async function SessionPage({ params }: SessionPageProps) {
     }
 
     const feedback = feedbackData as SessionFeedback;
-    const evaluations: QuestionEvaluation[] = feedback.evaluation_json.questionEvaluations ?? [];
+    const evalJson = feedback.evaluation_json;
+
+    if (evalJson.version !== 2) {
+        return <div>This session uses an outdated feedback format. Complete a new interview for full results.</div>;
+    }
+
+    const date = new Date(feedback.created_at).toLocaleDateString();
 
     return (
-        <div>
-            <h1>{session.role} - Interview Review</h1>
+        <div className="review-page">
+            <header className="review-header">
+                <h1>{session.role} — Interview Review</h1>
+                <p className="review-date">{date}</p>
+            </header>
 
-            <p><strong>Overall Score:</strong> {feedback.overall_score}/10</p>
-            <p><strong>Summary:</strong> {feedback.summary}</p>
+            <CompletenessBanner completeness={evalJson.completeness} />
 
-            <hr />
+            <SessionSummaryCard
+                overallScore={feedback.overall_score}
+                summary={feedback.summary}
+                dimensions={evalJson.dimensions}
+                verdict={evalJson.verdict}
+                verdictRationale={evalJson.verdictRationale}
+            />
 
-            <div>
-                {evaluations.map((evalItem, idx) => (
-                    <div key={evalItem.questionId}>
-                        <h2>Question {idx + 1}: {evalItem.questionText}</h2>
-
-                        <p><strong>Your Answer:</strong></p>
-                        {answerMap.get(evalItem.questionId) ? (
-                            <blockquote>
-                                {answerMap.get(evalItem.questionId)}
-                            </blockquote>
-                        ) : (
-                            <p>No answer submitted.</p>
-                        )}
-
-                        <p><strong>Score:</strong> {evalItem.score}/10</p>
-                        <p><strong>Feedback:</strong> {evalItem.feedback}</p>
-                        <p><strong>Ideal Answer:</strong> {evalItem.idealAnswer}</p>
-                    </div>
-                ))}
+            <div className="feedback-grid">
+                <FeedbackList title="Strengths" items={evalJson.strengths} />
+                <FeedbackList title="Weaknesses" items={evalJson.weaknesses} />
+                <FeedbackList title="Improvements" items={evalJson.improvements} />
             </div>
+
+            <FeedbackList title="Topics to review" items={evalJson.studyTopics} />
+
+            <ScoreRubric />
+
+            <section className="questions-section">
+                <h2 className="section-title">Question breakdown</h2>
+                {evalJson.questionEvaluations.map((evalItem, idx) => (
+                    <QuestionReviewCard
+                        key={evalItem.questionId}
+                        index={idx}
+                        evaluation={evalItem}
+                        userAnswer={answerMap.get(evalItem.questionId)}
+                    />
+                ))}
+            </section>
         </div>
     );
 }
