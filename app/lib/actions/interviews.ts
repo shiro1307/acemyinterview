@@ -142,3 +142,40 @@ export async function completeInterview(sessionId: string) {
 
   redirect(`/session/${sessionId}`);
 }
+
+export async function deleteSession(sessionId: string) {
+  const { supabase } = await verifySessionOwner(sessionId);
+
+  // Explicitly delete related records in the correct order to avoid foreign key issues
+  // This ensures safe deletion even if cascade rules aren't configured
+  
+  // 1. Delete feedback (references session_id)
+  const { error: feedbackError } = await supabase
+    .from("feedback")
+    .delete()
+    .eq("session_id", sessionId);
+  if (feedbackError) throw new Error(`Failed to delete feedback: ${feedbackError.message}`);
+
+  // 2. Delete answers (references session_id)
+  const { error: answersError } = await supabase
+    .from("answers")
+    .delete()
+    .eq("session_id", sessionId);
+  if (answersError) throw new Error(`Failed to delete answers: ${answersError.message}`);
+
+  // 3. Delete session_questions (references session_id)
+  const { error: sessionQuestionsError } = await supabase
+    .from("session_questions")
+    .delete()
+    .eq("session_id", sessionId);
+  if (sessionQuestionsError) throw new Error(`Failed to delete session questions: ${sessionQuestionsError.message}`);
+
+  // 4. Finally delete the session itself
+  const { error: sessionError } = await supabase
+    .from("sessions")
+    .delete()
+    .eq("id", sessionId);
+  if (sessionError) throw new Error(`Failed to delete session: ${sessionError.message}`);
+
+  return { success: true };
+}

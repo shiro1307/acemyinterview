@@ -11,6 +11,7 @@ interface QuestionFormProps {
     submitQuestion: (answerText: string) => void;
     isLastQuestion: boolean;
     onFinishInterview: (answerText: string) => void;
+    onSkipQuestion: () => void;
 }
 
 export default function QuestionForm({
@@ -20,6 +21,7 @@ export default function QuestionForm({
     submitQuestion,
     isLastQuestion,
     onFinishInterview,
+    onSkipQuestion,
 }: QuestionFormProps) {
     const [answerText, setAnswerText] = useState("");
 
@@ -62,6 +64,14 @@ export default function QuestionForm({
             <button onClick={handleSubmit} disabled={!answerText.trim()}>
                 {isLastQuestion ? "Submit & Finish Interview" : "Submit Answer"}
             </button>
+            {!isLastQuestion && (
+                <>
+                    {" "}
+                    <button onClick={onSkipQuestion}>
+                        Skip Question
+                    </button>
+                </>
+            )}
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import QuestionForm from "./QuestionForm";
 import { Question } from "@/app/types";
 import { submitAnswer, completeInterview } from "../lib/actions/interviews";
+import InterviewTimer from "./InterviewTimer";
 
 export default function InterviewQuestions({ questions, sessionId }: { questions: Question[], sessionId: string }) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -15,6 +16,12 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
     const question = questions[currentIndex];
     const isLastQuestion = currentIndex === questions.length - 1;
     const router = useRouter();
+
+    async function handleSkipQuestion() {
+        if (!isLastQuestion) {
+            setCurrentIndex((prev) => prev + 1);
+        }
+    }
 
     async function handleAnswerSubmit(answerText: string) {
         setIsSubmitting(true);
@@ -80,6 +87,8 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
 
     return (
         <div>
+            <InterviewTimer />
+            
             {isSubmitting && <p>Submitting...</p>}
             {submitError && <p>Error: {submitError}</p>}
 
@@ -92,6 +101,7 @@ export default function InterviewQuestions({ questions, sessionId }: { questions
                     submitQuestion={handleAnswerSubmit}
                     isLastQuestion={isLastQuestion}
                     onFinishInterview={handleFinishInterview}
+                    onSkipQuestion={handleSkipQuestion}
                 />
             )}
 

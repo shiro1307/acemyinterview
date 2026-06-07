@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { getUser } from "../lib/supabase/server";
 import { createClient } from "../lib/supabase/server";
+import HistoryList from "../components/HistoryList";
 
 type SessionRow = {
     id: string;
@@ -14,21 +14,6 @@ function getScore(feedback: SessionRow["feedback"]): number | null {
     if (!feedback) return null;
     if (Array.isArray(feedback)) return feedback[0]?.overall_score ?? null;
     return feedback.overall_score ?? null;
-}
-
-function computeDelta(
-    sessions: { role: string; score: number | null }[],
-    index: number
-): number | null {
-    const current = sessions[index];
-    if (current.score === null) return null;
-
-    for (let i = index + 1; i < sessions.length; i++) {
-        if (sessions[i].role === current.role && sessions[i].score !== null) {
-            return current.score - sessions[i].score!;
-        }
-    }
-    return null;
 }
 
 export default async function HistoryPage() {
@@ -50,41 +35,19 @@ export default async function HistoryPage() {
         return <div>Error loading sessions: {error.message}</div>;
     }
 
-    const rows = (sessions as SessionRow[] ?? []).map((s) => ({
+    const sessionData = (sessions as SessionRow[] ?? []).map((s) => ({
         id: s.id,
         role: s.role,
         date: new Date(s.created_at).toLocaleDateString(),
         status: s.status,
         score: getScore(s.feedback),
+        createdAt: s.created_at,
     }));
 
     return (
         <div>
             <h1>Interview History</h1>
-            {rows.length === 0 ? (
-                <p>No interviews yet. Start your first interview!</p>
-            ) : (
-                <ul className="history-list">
-                    {rows.map((session, index) => {
-                        const delta = computeDelta(rows, index);
-                        return (
-                            <li key={session.id} className="history-item">
-                                <Link href={`/session/${session.id}`}>
-                                    {session.role} — {session.date}
-                                </Link>
-                                {session.score !== null && (
-                                    <span className="history-score">{session.score}/10</span>
-                                )}
-                                {delta !== null && delta !== 0 && (
-                                    <span className={`history-delta ${delta > 0 ? "history-delta-positive" : "history-delta-negative"}`}>
-                                        {delta > 0 ? `+${delta}` : delta} vs prior {session.role}
-                                    </span>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ul>
-            )}
+            <HistoryList initialSessions={sessionData} />
         </div>
     );
 }

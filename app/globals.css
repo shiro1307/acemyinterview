@@ -40,9 +40,18 @@ a {
     margin-bottom: 16px;
 }
 
+.review-meta {
+    margin-bottom: 8px;
+}
+
 .review-date {
     color: #666;
     margin: 0;
+}
+
+.review-duration {
+    color: #666;
+    margin: 4px 0 0;
 }
 
 .section-title {
@@ -299,3 +308,23 @@ a {
 
 .history-delta-positive { color: #155724; }
 .history-delta-negative { color: #721c24; }
+
+/* Interview timer */
+.interview-timer {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #ccc;
+    font-family: monospace;
+    font-size: 1rem;
+}
+
+.timer-label {
+    margin-right: 8px;
+}
+
+.timer-display {
+    font-weight: bold;
+}

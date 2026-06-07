@@ -35,8 +35,9 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
     const { data: answersData, error: ansError } = await supabase
         .from("answers")
-        .select("id, question_id, text")
-        .eq("session_id", sessionId);
+        .select("id, question_id, text, created_at")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
 
     if (ansError) {
         return <div>Error loading answers: {ansError.message}</div>;
@@ -46,6 +47,21 @@ export default async function SessionPage({ params }: SessionPageProps) {
     (answersData ?? []).forEach((a) => {
         answerMap.set(a.question_id, a.text);
     });
+
+    // Calculate interview duration from first and last answer timestamps
+    let interviewDuration: string | null = null;
+    if (answersData && answersData.length >= 2) {
+        const firstTimestamp = new Date(answersData[0].created_at).getTime();
+        const lastTimestamp = new Date(answersData[answersData.length - 1].created_at).getTime();
+        const durationMs = lastTimestamp - firstTimestamp;
+        
+        const hours = Math.floor(durationMs / 3600000);
+        const minutes = Math.floor((durationMs % 3600000) / 60000);
+        const seconds = Math.floor((durationMs % 60000) / 1000);
+        
+        const pad = (n: number) => n.toString().padStart(2, "0");
+        interviewDuration = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    }
 
     const { data: feedbackData, error: fbError } = await supabase
         .from("feedback")
@@ -71,7 +87,16 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
             <header className="review-header">
                 <h1>{session.role} — Interview Review</h1>
-                <p className="review-date">{date}</p>
+                <div className="review-meta">
+                    <p className="review-date">{date}</p>
+                    {interviewDuration && (
+                        <p className="review-duration">
+                            <span>
+                                Actual interview duration: {interviewDuration} (HH:MM:SS)
+                            </span>
+                        </p>
+                    )}
+                </div>
                 <PrintButton />
             </header>
 
