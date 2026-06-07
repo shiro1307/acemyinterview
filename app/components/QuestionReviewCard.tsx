@@ -1,5 +1,6 @@
 import { QuestionEvaluation } from "@/app/types";
 import { QUESTION_TAG_LABELS } from "@/app/lib/feedback/constants";
+import MarkdownRenderer from "@/app/components/MarkdownRenderer";
 
 export default function QuestionReviewCard({
     index,
@@ -27,9 +28,17 @@ export default function QuestionReviewCard({
             )}
 
             <div className="feedback-section">
-                <p><strong>What worked:</strong> {evaluation.whatWorked}</p>
-                <p><strong>What was missed:</strong> {evaluation.whatMissed}</p>
-                <p><strong>How to improve:</strong> {evaluation.howToImprove}</p>
+                <div><strong>What worked:</strong>
+                    <MarkdownRenderer content={evaluation.whatWorked} />
+                </div>
+
+                <div><strong>What was missed:</strong>
+                    <MarkdownRenderer content={evaluation.whatMissed} />
+                </div>
+
+                <div><strong>How to improve:</strong>
+                    <MarkdownRenderer content={evaluation.howToImprove} />
+                </div>
             </div>
 
             {(evaluation.conceptsMentioned.length > 0 || evaluation.conceptsMissed.length > 0) && (
@@ -59,7 +68,9 @@ export default function QuestionReviewCard({
 
             <details>
                 <summary>Reference answer</summary>
-                <p className="ideal-answer">{evaluation.idealAnswer}</p>
+                <div className="ideal-answer">
+                    <MarkdownRenderer content={evaluation.idealAnswer} />
+                </div>
             </details>
         </div>
     );

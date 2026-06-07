@@ -1,3 +1,5 @@
+import MarkdownRenderer from "@/app/components/MarkdownRenderer";
+
 interface FeedbackListProps {
     title: string;
     items: string[];
@@ -12,7 +14,9 @@ export default function FeedbackList({ title, items, className = "" }: FeedbackL
             <h3 className="card-title">{title}</h3>
             <ul className="feedback-list">
                 {items.map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index}>
+                        <MarkdownRenderer content={item} />
+                    </li>
                 ))}
             </ul>
         </div>

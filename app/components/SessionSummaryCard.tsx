@@ -1,5 +1,6 @@
 import { DimensionScores, Verdict } from "@/app/types";
 import { VERDICT_LABELS } from "@/app/lib/feedback/constants";
+import MarkdownRenderer from "@/app/components/MarkdownRenderer";
 
 function DimensionBar({ label, score }: { label: string; score: number }) {
     return (
@@ -32,10 +33,14 @@ export default function SessionSummaryCard({
                 <div className="hero-score">{overallScore}<span className="hero-score-max">/10</span></div>
                 <div className="hero-verdict">
                     <span className={`verdict-badge verdict-${verdict}`}>{VERDICT_LABELS[verdict]}</span>
-                    <p className="verdict-rationale">{verdictRationale}</p>
+                    <div>
+                        <MarkdownRenderer content={verdictRationale} />
+                    </div>
                 </div>
             </div>
-            <p className="summary-text">{summary}</p>
+            <div className="summary-text">
+                <MarkdownRenderer content={summary} />
+            </div>
             <div className="dimensions">
                 <DimensionBar label="Communication" score={dimensions.communication} />
                 <DimensionBar label="Technical depth" score={dimensions.technicalDepth} />

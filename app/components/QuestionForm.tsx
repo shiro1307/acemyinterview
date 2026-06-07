@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import SpeakText from "./SpeakText";
 
 interface QuestionFormProps {
     questionNumber: number;
@@ -29,10 +30,12 @@ export default function QuestionForm({
         }
     };
 
+    //<p>{questionText}</p>
+
     return (
         <div>
             <h1>Question {questionNumber} out of {totalQuestions}</h1>
-            <p>{questionText}</p>
+            <SpeakText text={questionText} />
             <textarea
                 value={answerText}
                 onChange={(e) => setAnswerText(e.target.value)}

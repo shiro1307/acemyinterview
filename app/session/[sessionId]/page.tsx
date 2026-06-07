@@ -67,6 +67,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
     return (
         <div className="review-page">
+
             <header className="review-header">
                 <h1>{session.role} — Interview Review</h1>
                 <p className="review-date">{date}</p>
