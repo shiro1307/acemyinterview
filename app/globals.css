@@ -328,3 +328,97 @@ a {
 .timer-display {
     font-weight: bold;
 }
+
+/* Empty states */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    margin: 20px 0;
+}
+
+.empty-state h2 {
+    font-size: 1.25rem;
+    margin: 0 0 8px;
+    color: #333;
+}
+
+.empty-state p {
+    color: #666;
+    margin: 0 0 20px;
+}
+
+.empty-state a {
+    display: inline-block;
+    background-color: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.empty-state a:hover {
+    background-color: #555;
+}
+
+/* Loading states */
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: #333;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-container {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.loading-text {
+    margin-top: 12px;
+    color: #666;
+}
+
+/* Error states */
+.error-message {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+    padding: 12px;
+    border-radius: 4px;
+    margin: 12px 0;
+}
+
+/* Button states */
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+button.loading {
+    position: relative;
+    color: transparent;
+}
+
+button.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid #fff;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}

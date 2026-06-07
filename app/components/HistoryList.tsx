@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { deleteSession } from "../lib/actions/interviews";
+import EmptyState from "./EmptyState";
 
 type SessionData = {
     id: string;
@@ -10,7 +11,7 @@ type SessionData = {
     date: string;
     status: string;
     score: number | null;
-    createdAt: string; // ISO string for sorting
+    createdAt: string;
 };
 
 type SortOrder = "newest" | "oldest";
@@ -19,15 +20,14 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
     const [sessions, setSessions] = useState(initialSessions);
     const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [error, setError] = useState<string>("");
 
-    // Sort sessions based on selected order
     const sortedSessions = [...sessions].sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
         return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
     });
 
-    // Compute delta for each session
     function computeDelta(index: number): number | null {
         const current = sortedSessions[index];
         if (current.score === null) return null;
@@ -40,18 +40,22 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
         return null;
     }
 
-    // Handle delete with confirmation
     const handleDelete = async (sessionId: string) => {
-        if (window.confirm("Are you sure you want to delete this interview session? This action cannot be undone.")) {
-            setDeletingId(sessionId);
-            try {
-                await deleteSession(sessionId);
-                setSessions(sessions.filter(s => s.id !== sessionId));
-            } catch (error) {
-                alert("Failed to delete session: " + (error as Error).message);
-            } finally {
-                setDeletingId(null);
-            }
+        if (!window.confirm("Are you sure you want to delete this interview session? This action cannot be undone.")) {
+            return;
+        }
+
+        setDeletingId(sessionId);
+        setError("");
+        
+        try {
+            await deleteSession(sessionId);
+            setSessions(sessions.filter(s => s.id !== sessionId));
+        } catch (err) {
+            console.error("Failed to delete session:", err);
+            setError(err instanceof Error ? err.message : "Failed to delete session");
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -76,12 +80,21 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
                 </select>
             </div>
 
+            {error && <div className="error-message">{error}</div>}
+
             {sortedSessions.length === 0 ? (
-                <p>No interviews yet. Start your first interview!</p>
+                <EmptyState
+                    title="No interview history yet"
+                    description="You haven't completed any interviews yet. Start your first mock interview to see your progress here."
+                    actionText="Start your first interview"
+                    actionHref="/interview"
+                />
             ) : (
                 <ul className="history-list">
                     {sortedSessions.map((session, index) => {
                         const delta = computeDelta(index);
+                        const isDeleting = deletingId === session.id;
+                        
                         return (
                             <li key={session.id} className="history-item">
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
@@ -100,19 +113,19 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
                                     </div>
                                     <button
                                         onClick={() => handleDelete(session.id)}
-                                        disabled={deletingId === session.id}
+                                        disabled={isDeleting}
                                         style={{
                                             padding: "0.5rem 1rem",
                                             backgroundColor: "#dc3545",
                                             color: "white",
                                             border: "none",
                                             borderRadius: "4px",
-                                            cursor: deletingId === session.id ? "not-allowed" : "pointer",
-                                            opacity: deletingId === session.id ? 0.6 : 1,
+                                            cursor: isDeleting ? "not-allowed" : "pointer",
+                                            opacity: isDeleting ? 0.6 : 1,
                                             marginLeft: "1rem"
                                         }}
                                     >
-                                        {deletingId === session.id ? "Deleting..." : "Delete"}
+                                        {isDeleting ? "Deleting..." : "Delete"}
                                     </button>
                                 </div>
                             </li>

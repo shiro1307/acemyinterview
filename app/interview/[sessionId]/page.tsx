@@ -2,6 +2,7 @@ import InterviewQuestions from "@/app/components/InterviewQuestions";
 import { getUser } from "../../lib/supabase/server";
 import { createClient } from "../../lib/supabase/server";
 import { Question } from "@/app/types";
+import EmptyState from "@/app/components/EmptyState";
 
 interface InterviewSessionPageProps {
     params: Promise<{ sessionId: string }>;
@@ -11,7 +12,17 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     const user = await getUser();
 
     if (!user) {
-        return <div>Please log in to continue</div>;
+        return (
+            <div>
+                <h1>Interview</h1>
+                <EmptyState
+                    title="Please log in"
+                    description="You need to be logged in to take an interview. Create an account or sign in to get started."
+                    actionText="Go to login"
+                    actionHref="/login"
+                />
+            </div>
+        );
     }
 
     const { sessionId } = await params;
@@ -26,7 +37,17 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
         .single();
 
     if (sessionError || !session) {
-        return <div>Session not found or access denied</div>;
+        return (
+            <div>
+                <h1>Interview</h1>
+                <EmptyState
+                    title="Session not found"
+                    description="This interview session doesn't exist or you don't have permission to access it."
+                    actionText="Start a new interview"
+                    actionHref="/interview"
+                />
+            </div>
+        );
     }
 
     interface SessionQuestionData {
@@ -93,7 +114,31 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     const questionError = sessionQuestionsError || questionsError;
 
     if (questionError) {
-        return <div>Error loading questions: {questionError.message || "Unknown error"}</div>;
+        return (
+            <div>
+                <h1>{session.role} Interview</h1>
+                <EmptyState
+                    title="Error loading questions"
+                    description={`We encountered an error while loading the interview questions: ${questionError.message || "Unknown error"}`}
+                    actionText="Back to interview selection"
+                    actionHref="/interview"
+                />
+            </div>
+        );
+    }
+
+    if (questions.length === 0) {
+        return (
+            <div>
+                <h1>{session.role} Interview</h1>
+                <EmptyState
+                    title="No questions available"
+                    description="This interview session doesn't have any questions assigned yet. This might be a configuration issue."
+                    actionText="Back to interview selection"
+                    actionHref="/interview"
+                />
+            </div>
+        );
     }
 
     return (

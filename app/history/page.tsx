@@ -1,6 +1,7 @@
 import { getUser } from "../lib/supabase/server";
 import { createClient } from "../lib/supabase/server";
 import HistoryList from "../components/HistoryList";
+import EmptyState from "../components/EmptyState";
 
 type SessionRow = {
     id: string;
@@ -20,7 +21,17 @@ export default async function HistoryPage() {
     const user = await getUser();
 
     if (!user) {
-        return <div>Please log in to view your interview history</div>;
+        return (
+            <div>
+                <h1>Interview History</h1>
+                <EmptyState
+                    title="Please log in"
+                    description="You need to be logged in to view your interview history and track your progress over time."
+                    actionText="Go to login"
+                    actionHref="/login"
+                />
+            </div>
+        );
     }
 
     const supabase = await createClient();
@@ -32,7 +43,17 @@ export default async function HistoryPage() {
         .order("created_at", { ascending: false });
 
     if (error) {
-        return <div>Error loading sessions: {error.message}</div>;
+        return (
+            <div>
+                <h1>Interview History</h1>
+                <EmptyState
+                    title="Error loading sessions"
+                    description={`We encountered an error while loading your interview history: ${error.message}`}
+                    actionText="Try again"
+                    actionHref="/history"
+                />
+            </div>
+        );
     }
 
     const sessionData = (sessions as SessionRow[] ?? []).map((s) => ({

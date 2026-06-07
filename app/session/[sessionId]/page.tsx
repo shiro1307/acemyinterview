@@ -7,6 +7,7 @@ import FeedbackList from "@/app/components/FeedbackList";
 import ScoreRubric from "@/app/components/ScoreRubric";
 import QuestionReviewCard from "@/app/components/QuestionReviewCard";
 import PrintButton from "@/app/components/PrintButton";
+import EmptyState from "@/app/components/EmptyState";
 
 interface SessionPageProps {
     params: Promise<{ sessionId: string }>;
@@ -16,7 +17,16 @@ export default async function SessionPage({ params }: SessionPageProps) {
     const user = await getUser();
 
     if (!user) {
-        return <div>Please log in to view this session</div>;
+        return (
+            <div className="review-page">
+                <EmptyState
+                    title="Please log in"
+                    description="You need to be logged in to view interview session details and feedback."
+                    actionText="Go to login"
+                    actionHref="/login"
+                />
+            </div>
+        );
     }
 
     const { sessionId } = await params;
@@ -30,7 +40,16 @@ export default async function SessionPage({ params }: SessionPageProps) {
         .single();
 
     if (!session || sessionError) {
-        return <div>Session not found or access denied</div>;
+        return (
+            <div className="review-page">
+                <EmptyState
+                    title="Session not found"
+                    description="This interview session doesn't exist or you don't have permission to view it."
+                    actionText="View your interview history"
+                    actionHref="/history"
+                />
+            </div>
+        );
     }
 
     const { data: answersData, error: ansError } = await supabase
@@ -40,7 +59,16 @@ export default async function SessionPage({ params }: SessionPageProps) {
         .order("created_at", { ascending: true });
 
     if (ansError) {
-        return <div>Error loading answers: {ansError.message}</div>;
+        return (
+            <div className="review-page">
+                <EmptyState
+                    title="Error loading answers"
+                    description={`We encountered an error while loading your interview answers: ${ansError.message}`}
+                    actionText="View your interview history"
+                    actionHref="/history"
+                />
+            </div>
+        );
     }
 
     const answerMap = new Map<string, string>();
@@ -70,14 +98,32 @@ export default async function SessionPage({ params }: SessionPageProps) {
         .single();
 
     if (fbError || !feedbackData) {
-        return <div>No feedback found for this session. The interview may not be completed yet.</div>;
+        return (
+            <div className="review-page">
+                <EmptyState
+                    title="No feedback available yet"
+                    description="This interview hasn't been completed or evaluated yet. Complete all questions and submit your interview to see your detailed feedback and score."
+                    actionText="View your interview history"
+                    actionHref="/history"
+                />
+            </div>
+        );
     }
 
     const feedback = feedbackData as SessionFeedback;
     const evalJson = feedback.evaluation_json;
 
     if (evalJson.version !== 2) {
-        return <div>This session uses an outdated feedback format. Complete a new interview for full results.</div>;
+        return (
+            <div className="review-page">
+                <EmptyState
+                    title="Outdated feedback format"
+                    description="This session uses an outdated feedback format. Complete a new interview to see the latest detailed feedback and scoring."
+                    actionText="Start a new interview"
+                    actionHref="/interview"
+                />
+            </div>
+        );
     }
 
     const date = new Date(feedback.created_at).toLocaleDateString();
