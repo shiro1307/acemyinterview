@@ -6,6 +6,7 @@ import SessionSummaryCard from "@/app/components/SessionSummaryCard";
 import FeedbackList from "@/app/components/FeedbackList";
 import ScoreRubric from "@/app/components/ScoreRubric";
 import QuestionReviewCard from "@/app/components/QuestionReviewCard";
+import PrintButton from "@/app/components/PrintButton";
 
 interface SessionPageProps {
     params: Promise<{ sessionId: string }>;
@@ -66,11 +67,12 @@ export default async function SessionPage({ params }: SessionPageProps) {
     const date = new Date(feedback.created_at).toLocaleDateString();
 
     return (
-        <div className="review-page">
+        <div className="review-page printable">
 
             <header className="review-header">
                 <h1>{session.role} — Interview Review</h1>
                 <p className="review-date">{date}</p>
+                <PrintButton />
             </header>
 
             <CompletenessBanner completeness={evalJson.completeness} />

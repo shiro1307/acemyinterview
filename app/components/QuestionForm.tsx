@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SpeakText from "./SpeakText";
+import SpeechTextarea from "./SpeechTextArea";
 
 interface QuestionFormProps {
     questionNumber: number;
@@ -32,17 +33,31 @@ export default function QuestionForm({
 
     //<p>{questionText}</p>
 
+    /*
+
+    <textarea
+        value={answerText}
+        onChange={(e) => setAnswerText(e.target.value)}
+        rows={5}
+        cols={50}
+        placeholder="Type your answer here..."
+    />
+
+    */
+
     return (
         <div>
             <h1>Question {questionNumber} out of {totalQuestions}</h1>
             <SpeakText text={questionText} />
-            <textarea
+
+            <SpeechTextarea
                 value={answerText}
-                onChange={(e) => setAnswerText(e.target.value)}
+                onChange={setAnswerText}
                 rows={5}
                 cols={50}
                 placeholder="Type your answer here..."
             />
+
             <br />
             <button onClick={handleSubmit} disabled={!answerText.trim()}>
                 {isLastQuestion ? "Submit & Finish Interview" : "Submit Answer"}
