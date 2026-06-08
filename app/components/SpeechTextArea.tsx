@@ -89,7 +89,7 @@ export default function SpeechTextarea({
     };
 
     return (
-        <div>
+        <div className="speech-textarea-wrapper">
             <textarea
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
@@ -98,16 +98,9 @@ export default function SpeechTextarea({
                 placeholder={placeholder}
             />
 
-            <br />
-
             <button
                 type="button"
                 onClick={toggleListening}
-                style={{
-                    marginTop: "4px",
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                }}
             >
                 {isListening ? "Stop Dictation" : "Start Dictation"}
             </button>

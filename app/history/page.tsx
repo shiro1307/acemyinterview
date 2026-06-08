@@ -3,6 +3,10 @@ import { createClient } from "../lib/supabase/server";
 import HistoryList from "../components/HistoryList";
 import EmptyState from "../components/EmptyState";
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type SessionRow = {
     id: string;
     role: string;

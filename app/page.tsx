@@ -1,31 +1,28 @@
-"use client"
+import { redirect } from "next/navigation";
+import { getUser } from "./lib/supabase/server";
+import HomePage from "./components/HomePage";
 
-import Link from "next/link";
-import SpeakText from "./components/SpeakText";
-import { useState } from "react";
-import SpeechTextarea from "./components/SpeechTextArea";
+/**
+ * Root route - Authentication gateway
+ * - Logged-out users: See Landing Page
+ * - Logged-in users: Redirected to Dashboard
+ */
+export default async function RootPage() {
+  const user = await getUser();
 
-export default function Home() {
-  const [value, setValue] = useState("");
+  // Redirect authenticated users to dashboard
+  if (user) {
+    redirect("/dashboard");
+  }
+
+  // Show Landing Page for unauthenticated users
+  // Currently displays the same content as Dashboard
+  // Future: Will be replaced with marketing content
 
   return (
     <>
-      Hello world!
-
-      <SpeakText text="If you want to map a standard Markdown tag (like an <h1> or <a>) to a custom React component or add custom TypeScript-supported styling, use the components prop:"></SpeakText>
-
-      <SpeechTextarea
-        value={value}
-        onChange={setValue}
-        rows={5}
-        cols={50}
-        placeholder="Type your answer here..."
-      />
-
-      <br></br>
-
-      <Link href="/interview">Go to interview?</Link>
-
+      This is the home page or the landing Page
+      for visitors and logged out users.
     </>
   );
 }

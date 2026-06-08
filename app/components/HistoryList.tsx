@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { deleteSession } from "../lib/actions/interviews";
 import EmptyState from "./EmptyState";
@@ -17,6 +18,7 @@ type SessionData = {
 type SortOrder = "newest" | "oldest";
 
 export default function HistoryList({ initialSessions }: { initialSessions: SessionData[] }) {
+    const router = useRouter();
     const [sessions, setSessions] = useState(initialSessions);
     const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -49,11 +51,15 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
         setError("");
         
         try {
-            await deleteSession(sessionId);
+            const result = await deleteSession(sessionId);
+            console.log("Delete result:", result);
             setSessions(sessions.filter(s => s.id !== sessionId));
+            // Refresh the page data from the server to ensure consistency
+            router.refresh();
         } catch (err) {
             console.error("Failed to delete session:", err);
             setError(err instanceof Error ? err.message : "Failed to delete session");
+            // Don't update local state if deletion failed
         } finally {
             setDeletingId(null);
         }

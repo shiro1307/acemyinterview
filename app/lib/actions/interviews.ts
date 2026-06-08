@@ -3,6 +3,7 @@
 import { createClient } from "../supabase/server";
 import { getCurrentUser } from "./auth";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { evaluateInterview, QAPair } from "../ai/evaluate";
 import { computeCompleteness } from "../feedback/completeness";
 
@@ -144,38 +145,69 @@ export async function completeInterview(sessionId: string) {
 }
 
 export async function deleteSession(sessionId: string) {
-  const { supabase } = await verifySessionOwner(sessionId);
+  const { supabase, user } = await getSupabase();
+  
+  console.log("Deleting session:", sessionId, "for user:", user.id);
+  
+  // First verify the session exists and belongs to the user
+  const { data: sessionData, error: verifyError } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .single();
+  
+  console.log("Session verification:", { sessionData, verifyError });
+  
+  if (verifyError || !sessionData) {
+    throw new Error("Session not found or unauthorized");
+  }
 
   // Explicitly delete related records in the correct order to avoid foreign key issues
-  // This ensures safe deletion even if cascade rules aren't configured
+  // Note: Supabase delete() doesn't error if no rows match, so we don't check errors for missing data
   
   // 1. Delete feedback (references session_id)
-  const { error: feedbackError } = await supabase
+  const feedbackResult = await supabase
     .from("feedback")
     .delete()
     .eq("session_id", sessionId);
-  if (feedbackError) throw new Error(`Failed to delete feedback: ${feedbackError.message}`);
+  console.log("Feedback delete result:", feedbackResult);
 
   // 2. Delete answers (references session_id)
-  const { error: answersError } = await supabase
+  const answersResult = await supabase
     .from("answers")
     .delete()
     .eq("session_id", sessionId);
-  if (answersError) throw new Error(`Failed to delete answers: ${answersError.message}`);
+  console.log("Answers delete result:", answersResult);
 
   // 3. Delete session_questions (references session_id)
-  const { error: sessionQuestionsError } = await supabase
+  const sessionQuestionsResult = await supabase
     .from("session_questions")
     .delete()
     .eq("session_id", sessionId);
-  if (sessionQuestionsError) throw new Error(`Failed to delete session questions: ${sessionQuestionsError.message}`);
+  console.log("Session questions delete result:", sessionQuestionsResult);
 
-  // 4. Finally delete the session itself
-  const { error: sessionError } = await supabase
+  // 4. Finally delete the session itself (with user_id check for security)
+  const sessionDeleteResult = await supabase
     .from("sessions")
-    .delete()
-    .eq("id", sessionId);
-  if (sessionError) throw new Error(`Failed to delete session: ${sessionError.message}`);
+    .delete({ count: 'exact' })
+    .eq("id", sessionId)
+    .eq("user_id", user.id)
+    .select();
+  
+  console.log("Session delete result:", sessionDeleteResult);
+  
+  if (sessionDeleteResult.error) {
+    throw new Error(`Failed to delete session: ${sessionDeleteResult.error.message}`);
+  }
+  
+  if (!sessionDeleteResult.data || sessionDeleteResult.data.length === 0) {
+    throw new Error("Session was not deleted - possibly due to RLS policies or it doesn't exist");
+  }
 
+  // Revalidate the history page so it shows updated data on next render
+  revalidatePath("/history");
+
+  console.log("Delete completed successfully");
   return { success: true };
 }
