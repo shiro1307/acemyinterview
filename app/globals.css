@@ -769,6 +769,7 @@ label {
 
 @media print {
     body * { visibility: hidden; }
+    .printButton {display: none;}
     .printable, .printable * { visibility: visible; }
     .printable { position: absolute; top: 0; left: 0; }
     details, details > summary, details > * { display: block !important; }

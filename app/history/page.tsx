@@ -9,10 +9,12 @@ export const revalidate = 0;
 
 type SessionRow = {
     id: string;
-    role: string;
+    role: string; // Deprecated field
+    role_id: string;
     created_at: string;
     status: string;
     feedback: { overall_score: number }[] | { overall_score: number } | null;
+    roles?: { name: string }[] | { name: string } | null;
 };
 
 function getScore(feedback: SessionRow["feedback"]): number | null {
@@ -42,7 +44,7 @@ export default async function HistoryPage() {
 
     const { data: sessions, error } = await supabase
         .from("sessions")
-        .select("id, role, created_at, status, feedback(overall_score)")
+        .select("id, role, role_id, created_at, status, feedback(overall_score), roles(name)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -60,14 +62,21 @@ export default async function HistoryPage() {
         );
     }
 
-    const sessionData = (sessions as SessionRow[] ?? []).map((s) => ({
-        id: s.id,
-        role: s.role,
-        date: new Date(s.created_at).toLocaleDateString(),
-        status: s.status,
-        score: getScore(s.feedback),
-        createdAt: s.created_at,
-    }));
+    const sessionData = (sessions as SessionRow[] ?? []).map((s) => {
+        // Handle roles - could be an array (from join), a single object, or null
+        const roleName = Array.isArray(s.roles) 
+            ? s.roles[0]?.name 
+            : s.roles?.name;
+        
+        return {
+            id: s.id,
+            role: roleName || s.role, // Prefer new role join, fallback to deprecated field
+            date: new Date(s.created_at).toLocaleDateString(),
+            status: s.status,
+            score: getScore(s.feedback),
+            createdAt: s.created_at,
+        };
+    });
 
     return (
         <div>

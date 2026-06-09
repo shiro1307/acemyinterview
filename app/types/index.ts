@@ -13,14 +13,22 @@ export type SessionQuestion = {
 
 export type Session = {
     id: string;
-    role: string;
+    role: string; // Deprecated: use role_id
+    role_id: string;
     status: "active" | "completed" | "abandoned";
     questions: Question[];
 };
 
+export type RoleDifficulty = "entry" | "mid" | "senior" | "staff";
+
 export type Role = {
     id: string;
     name: string;
+    slug: string;
+    description?: string;
+    difficulty?: RoleDifficulty;
+    is_active: boolean;
+    created_at: string;
 };
 
 export const QUESTION_TAGS = [

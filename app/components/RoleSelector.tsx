@@ -7,8 +7,11 @@ import ErrorMessage from "./ErrorMessage";
 
 interface RoleSelectorProps {
     roles: {
-        name: string;
         id: string;
+        name: string;
+        slug: string;
+        description?: string | null;
+        difficulty?: string | null;
     }[];
 }
 
@@ -16,12 +19,12 @@ export default function RoleSelector({ roles }: RoleSelectorProps) {
     const [loading, setLoading] = useState<string | null>(null);
     const [error, setError] = useState<string>("");
 
-    const handleStartInterview = async (role: string) => {
-        setLoading(role);
+    const handleStartInterview = async (roleId: string) => {
+        setLoading(roleId);
         setError("");
         
         try {
-            await startInterview(role);
+            await startInterview(roleId);
         } catch (err) {
             console.error("Error starting interview:", err);
             setError(err instanceof Error ? err.message : "Failed to start interview");
@@ -45,12 +48,17 @@ export default function RoleSelector({ roles }: RoleSelectorProps) {
             {roles.map((role) => (
                 <div key={role.id}>
                     <button 
-                        onClick={() => handleStartInterview(role.name)}
+                        onClick={() => handleStartInterview(role.id)}
                         disabled={loading !== null}
-                        className={loading === role.name ? "loading" : ""}
+                        className={loading === role.id ? "loading" : ""}
                     >
-                        {loading === role.name ? "Starting..." : role.name}
+                        {loading === role.id ? "Starting..." : role.name}
                     </button>
+                    {role.description && (
+                        <p style={{ fontSize: "0.9rem", color: "#666", marginTop: "0.25rem" }}>
+                            {role.description}
+                        </p>
+                    )}
                 </div>
             ))}
         </div>

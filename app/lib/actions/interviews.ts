@@ -30,13 +30,29 @@ async function verifySessionOwner(sessionId: string, select = "id") {
 
 // --- Actions ---
 
-export async function startInterview(role: string) {
+export async function startInterview(roleId: string) {
   const { user, supabase } = await getSupabase();
 
-  // Create session
+  // Fetch role to get the name for backward compatibility
+  const { data: role, error: roleError } = await supabase
+    .from("roles")
+    .select("id, name")
+    .eq("id", roleId)
+    .eq("is_active", true)
+    .single();
+  
+  if (roleError || !role) throw new Error("Role not found or inactive");
+
+  // Create session with both role_id (new) and role (deprecated, for backward compatibility)
   const { data: session, error } = await supabase
     .from("sessions")
-    .insert({ id: crypto.randomUUID(), role, user_id: user.id, created_at: new Date().toISOString() })
+    .insert({ 
+      id: crypto.randomUUID(), 
+      role_id: role.id,
+      role: role.name, // Keep for backward compatibility during migration
+      user_id: user.id, 
+      created_at: new Date().toISOString() 
+    })
     .select()
     .single();
   if (error || !session) throw new Error("Failed to create session");
@@ -45,7 +61,7 @@ export async function startInterview(role: string) {
   const { data: allQuestions, error: qErr } = await supabase
     .from("questions")
     .select("id")
-    .eq("role", role)
+    .eq("role_id", role.id)
     .limit(100);
   if (qErr || !allQuestions) throw new Error("Failed to fetch questions");
 
@@ -107,7 +123,7 @@ export async function completeInterview(sessionId: string) {
       .eq("session_id", sessionId)
       .order("order_index", { ascending: true }),
     supabase.from("answers").select("question_id, text").eq("session_id", sessionId),
-    supabase.from("sessions").select("role").eq("id", sessionId).single(),
+    supabase.from("sessions").select("role, role_id, roles(name)").eq("id", sessionId).single(),
   ]);
   if (sqResult.error) throw new Error("Failed to fetch session questions");
   if (ansResult.error) throw new Error("Failed to fetch answers");
@@ -121,8 +137,12 @@ export async function completeInterview(sessionId: string) {
   const answers = ansResult.data ?? [];
   const completeness = computeCompleteness(questionIds, answers);
   const pairs = buildOrderedPairs(sqResult.data ?? [], questions ?? [], answers);
+  
+  // Get role name - prefer from join, fallback to deprecated role field
+  const roleName = (sessionResult.data.roles as any)?.name || sessionResult.data.role;
+  
   const { overallScore, summary, evaluationJson } = await evaluateInterview(
-    sessionResult.data.role,
+    roleName,
     pairs,
     completeness
   );

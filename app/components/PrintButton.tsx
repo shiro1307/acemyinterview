@@ -2,7 +2,7 @@
 
 export default function PrintButton() {
     return (
-        <button onClick={() => window.print()} className="print:hidden">
+        <button onClick={() => window.print()} className="printButton">
             Export to PDF
         </button>
     );

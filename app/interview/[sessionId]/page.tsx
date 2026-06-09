@@ -31,7 +31,7 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     // Fetch session and verify ownership
     const { data: session, error: sessionError } = await supabase
         .from("sessions")
-        .select("*")
+        .select("*, roles(name)")
         .eq("id", sessionId)
         .eq("user_id", user.id)
         .single();
@@ -114,9 +114,10 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     const questionError = sessionQuestionsError || questionsError;
 
     if (questionError) {
+        const roleName = (session.roles as any)?.name || session.role;
         return (
             <div>
-                <h1>{session.role} Interview</h1>
+                <h1>{roleName} Interview</h1>
                 <EmptyState
                     title="Error loading questions"
                     description={`We encountered an error while loading the interview questions: ${questionError.message || "Unknown error"}`}
@@ -130,7 +131,7 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
     if (questions.length === 0) {
         return (
             <div>
-                <h1>{session.role} Interview</h1>
+                <h1>{(session.roles as any)?.name || session.role} Interview</h1>
                 <EmptyState
                     title="No questions available"
                     description="This interview session doesn't have any questions assigned yet. This might be a configuration issue."
@@ -141,9 +142,11 @@ export default async function InterviewSessionPage({ params }: InterviewSessionP
         );
     }
 
+    const roleName = (session.roles as any)?.name || session.role;
+
     return (
         <div>
-            <h1>{session.role} Interview</h1>
+            <h1>{roleName} Interview</h1>
 
             <InterviewQuestions
                 questions={questions ?? []}

@@ -2,18 +2,18 @@
 
 ## Overview
 
-The database uses a **global question bank** decoupled from sessions. Sessions select a subset of questions via the `session_questions` join table. Feedback is stored **once per session** (not per answer).
+The database uses a **global question bank** decoupled from sessions. **Roles are now first-class entities** stored in a dedicated table. Sessions select a subset of questions via the `session_questions` join table. Feedback is stored **once per session** (not per answer).
 
 ---
 
 ## Data Flow
 
 ```
-User selects role
+User selects role (from roles table)
      ↓
-Create session (sessions)
+Create session with role_id (sessions)
      ↓
-Pick random questions from global bank → session_questions
+Pick random questions from global bank filtered by role_id → session_questions
      ↓
 User answers → answers
      ↓
@@ -26,15 +26,42 @@ Review page reads feedback.evaluation_json (v2)
 
 ## Tables
 
+### roles (NEW)
+
+First-class role entities with metadata.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text (PK) | e.g., 'role-frontend' |
+| name | text (UNIQUE) | Display name, e.g., "Frontend Engineer" |
+| slug | text (UNIQUE) | URL-friendly identifier |
+| description | text | Optional role description |
+| difficulty | text | CHECK: 'entry', 'mid', 'senior', 'staff' |
+| is_active | boolean | Whether role is available for interviews |
+| created_at | timestamptz | |
+
+**Indexes:**
+- PRIMARY KEY on `id`
+- UNIQUE on `name`
+- UNIQUE on `slug`
+- INDEX on `is_active`
+
 ### sessions
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | text (PK) | UUID |
 | user_id | uuid (FK) | Owner |
-| role | text | Role selected for interview |
+| role_id | text (FK → roles.id) | **NEW**: Role reference |
+| role | text | **DEPRECATED**: Keep temporarily for migration |
 | status | text | `active`, `completed`, or `abandoned` |
 | created_at | timestamptz | |
+
+**Foreign Keys:**
+- `role_id` REFERENCES `roles(id)` ON DELETE RESTRICT
+
+**Indexes:**
+- INDEX on `role_id`
 
 ### questions (global bank)
 
@@ -42,8 +69,15 @@ Review page reads feedback.evaluation_json (v2)
 |--------|------|-------|
 | id | text (PK) | UUID |
 | text | text | Question prompt |
-| role | text | Filter by interview role |
+| role_id | text (FK → roles.id) | **NEW**: Role reference |
+| role | text | **DEPRECATED**: Keep temporarily for migration |
 | created_at | timestamptz | Optional |
+
+**Foreign Keys:**
+- `role_id` REFERENCES `roles(id)` ON DELETE RESTRICT
+
+**Indexes:**
+- INDEX on `role_id`
 
 ### session_questions (join table)
 
@@ -144,6 +178,33 @@ TRUNCATE TABLE feedback, answers, session_questions, sessions CASCADE;
 
 ## Query Patterns
 
+### Fetch active roles for interview selection
+
+```sql
+SELECT id, name, slug, description, difficulty
+FROM roles
+WHERE is_active = true
+ORDER BY name ASC;
+```
+
+### Create a session with role_id
+
+```sql
+INSERT INTO sessions (id, user_id, role_id, role, status, created_at)
+VALUES ('uuid', 'user-uuid', 'role-frontend', 'Frontend Engineer', 'active', NOW())
+RETURNING *;
+```
+
+### Fetch questions for a role
+
+```sql
+SELECT id, text, role_id
+FROM questions
+WHERE role_id = 'role-frontend'
+ORDER BY RANDOM()
+LIMIT 5;
+```
+
 ### Fetch questions for a session
 
 ```sql
@@ -154,12 +215,31 @@ WHERE session_questions.session_id = ?
 ORDER BY session_questions.order_index ASC;
 ```
 
-### Fetch session with feedback (history)
+### Fetch session with feedback (history) - using role join
 
 ```sql
-SELECT sessions.*, feedback.overall_score
+SELECT 
+    sessions.id,
+    sessions.role_id,
+    sessions.created_at,
+    sessions.status,
+    roles.name as role_name,
+    feedback.overall_score
 FROM sessions
 LEFT JOIN feedback ON feedback.session_id = sessions.id
+JOIN roles ON roles.id = sessions.role_id
 WHERE sessions.user_id = ?
 ORDER BY sessions.created_at DESC;
+```
+
+### Fetch session detail with role
+
+```sql
+SELECT 
+    sessions.*,
+    roles.name as role_name,
+    roles.description as role_description
+FROM sessions
+JOIN roles ON roles.id = sessions.role_id
+WHERE sessions.id = ? AND sessions.user_id = ?;
 ```

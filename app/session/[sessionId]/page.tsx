@@ -34,7 +34,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
     const { data: session, error: sessionError } = await supabase
         .from("sessions")
-        .select("*")
+        .select("*, roles(name)")
         .eq("id", sessionId)
         .eq("user_id", user.id)
         .single();
@@ -127,12 +127,15 @@ export default async function SessionPage({ params }: SessionPageProps) {
     }
 
     const date = new Date(feedback.created_at).toLocaleDateString();
+    
+    // Get role name - prefer from join, fallback to deprecated field
+    const roleName = (session.roles as any)?.name || session.role;
 
     return (
         <div className="review-page printable">
 
             <header className="review-header">
-                <h1>{session.role} — Interview Review</h1>
+                <h1>{roleName} — Interview Review</h1>
                 <div className="review-meta">
                     <p className="review-date">{date}</p>
                     {interviewDuration && (
