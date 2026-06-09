@@ -774,3 +774,222 @@ label {
     .printable { position: absolute; top: 0; left: 0; }
     details, details > summary, details > * { display: block !important; }
 }
+
+/* Role Selector Table */
+.role-selector {
+    margin-top: 20px;
+}
+
+.role-controls {
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.role-search {
+    width: 100%;
+    max-width: 600px;
+    padding: 12px 16px;
+    font-size: 1rem;
+}
+
+.role-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+}
+
+.filter-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+}
+
+.sort-select {
+    padding: 8px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: var(--color-blue-500);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.checkbox-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.95rem;
+    font-weight: normal;
+    color: var(--color-gray-700);
+    cursor: pointer;
+    margin: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.role-table-container {
+    overflow-x: auto;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    background: var(--color-white);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.role-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.role-table thead {
+    background: var(--color-gray-100);
+    border-bottom: 2px solid var(--color-gray-200);
+}
+
+.role-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.role-table td {
+    padding: 16px;
+    border-top: 1px solid var(--color-gray-200);
+    color: var(--color-gray-700);
+}
+
+.role-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.role-table tbody tr:hover {
+    background-color: var(--color-gray-50);
+}
+
+.role-name {
+    font-weight: 600;
+    color: var(--color-gray-900);
+    white-space: nowrap;
+}
+
+.role-description {
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.role-questions {
+    text-align: center;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.difficulty-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.difficulty-easy {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.difficulty-medium {
+    background: #fed7aa;
+    color: #9a3412;
+}
+
+.difficulty-hard {
+    background: #fecaca;
+    color: #991b1b;
+}
+
+.difficulty-expert {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.action-button {
+    padding: 8px 20px;
+    background-color: var(--color-blue-600);
+    color: var(--color-white);
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.action-button:hover:not(:disabled) {
+    background-color: var(--color-blue-500);
+}
+
+.action-button:active:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
+.action-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.action-button.loading {
+    position: relative;
+    color: transparent;
+}
+
+.action-button.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid var(--color-white);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}

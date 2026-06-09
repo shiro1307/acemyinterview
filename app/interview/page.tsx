@@ -15,7 +15,7 @@ export default async function InterviewPage() {
     
     if (error) {
         return (
-            <div>
+            <div className="container">
                 <h1>Select a Role</h1>
                 <EmptyState
                     title="Error loading roles"
@@ -27,13 +27,34 @@ export default async function InterviewPage() {
         );
     }
 
+    // Get question counts per role
+    const { data: questions, error: questionsError } = await supabase
+        .from("questions")
+        .select("role_id");
+    
+    console.log("Questions query result:", { questions, questionsError });
+    
+    // Count questions per role ID
+    const questionCounts: Record<string, number> = {};
+    if (questions) {
+        questions.forEach((q: any) => {
+            const roleId = q.role_id;
+            if (roleId) {
+                questionCounts[roleId] = (questionCounts[roleId] || 0) + 1;
+            }
+        });
+    }
+    
+    console.log("Question counts:", questionCounts);
+    console.log("Roles:", roles?.map(r => ({ id: r.id, name: r.name })));
+
     return (
-        <>
-            Interview, choose roles and stuff
-            <div>
-                <h1>Select a Role</h1>
-                <RoleSelector roles={roles ?? []} />
-            </div>
-        </>
+        <div className="container">
+            <h1>Select Interview Role</h1>
+            <p style={{ marginBottom: '24px', color: 'var(--color-gray-600)' }}>
+                Choose a role to start your practice interview session
+            </p>
+            <RoleSelector roles={roles ?? []} questionCounts={questionCounts} />
+        </div>
     );
 }
