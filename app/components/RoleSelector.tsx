@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { startInterview } from "../lib/actions/interviews";
 import EmptyState from "./EmptyState";
 import ErrorMessage from "./ErrorMessage";
+import InterviewLengthModal from "./InterviewLengthModal";
 
 interface RoleSelectorProps {
     roles: {
@@ -16,7 +17,7 @@ interface RoleSelectorProps {
     questionCounts: Record<string, number>;
 }
 
-type SortOption = "name" | "difficulty" | "questions";
+type SortOption = "name" | "name-desc" | "difficulty" | "difficulty-desc" | "questions" | "questions-desc";
 
 export default function RoleSelector({ roles, questionCounts }: RoleSelectorProps) {
     const [loading, setLoading] = useState<string | null>(null);
@@ -24,6 +25,8 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<SortOption>("name");
     const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
 
     // Get unique difficulty levels
     const difficultyLevels = useMemo(() => {
@@ -49,15 +52,26 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
         filtered.sort((a, b) => {
             if (sortBy === "name") {
                 return a.name.localeCompare(b.name);
+            } else if (sortBy === "name-desc") {
+                return b.name.localeCompare(a.name);
             } else if (sortBy === "difficulty") {
                 const difficultyOrder = ["Easy", "Medium", "Hard", "Expert"];
                 const aIndex = a.difficulty ? difficultyOrder.indexOf(a.difficulty) : -1;
                 const bIndex = b.difficulty ? difficultyOrder.indexOf(b.difficulty) : -1;
                 return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+            } else if (sortBy === "difficulty-desc") {
+                const difficultyOrder = ["Easy", "Medium", "Hard", "Expert"];
+                const aIndex = a.difficulty ? difficultyOrder.indexOf(a.difficulty) : -1;
+                const bIndex = b.difficulty ? difficultyOrder.indexOf(b.difficulty) : -1;
+                return (bIndex === -1 ? 999 : bIndex) - (aIndex === -1 ? 999 : aIndex);
             } else if (sortBy === "questions") {
                 const aCount = questionCounts[a.id] || 0;
                 const bCount = questionCounts[b.id] || 0;
                 return bCount - aCount;
+            } else if (sortBy === "questions-desc") {
+                const aCount = questionCounts[a.id] || 0;
+                const bCount = questionCounts[b.id] || 0;
+                return aCount - bCount;
             }
             return 0;
         });
@@ -65,17 +79,30 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
         return filtered;
     }, [roles, searchQuery, selectedDifficulties, sortBy, questionCounts]);
 
-    const handleStartInterview = async (roleId: string) => {
-        setLoading(roleId);
+    const handleStartClick = (roleId: string) => {
+        setSelectedRoleId(roleId);
+        setModalOpen(true);
+    };
+
+    const handleSelectLength = async (length: "quick" | "standard" | "deep_dive") => {
+        if (!selectedRoleId) return;
+        
+        setModalOpen(false);
+        setLoading(selectedRoleId);
         setError("");
         
         try {
-            await startInterview(roleId);
+            await startInterview(selectedRoleId, length);
         } catch (err) {
             console.error("Error starting interview:", err);
             setError(err instanceof Error ? err.message : "Failed to start interview");
             setLoading(null);
         }
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+        setSelectedRoleId(null);
     };
 
     const toggleDifficulty = (difficulty: string) => {
@@ -118,9 +145,12 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
                             onChange={(e) => setSortBy(e.target.value as SortOption)}
                             className="sort-select"
                         >
-                            <option value="name">Name</option>
-                            <option value="difficulty">Difficulty</option>
-                            <option value="questions">Questions Available</option>
+                            <option value="name">Name (A → Z)</option>
+                            <option value="name-desc">Name (Z → A)</option>
+                            <option value="difficulty">Difficulty (Easy → Hard)</option>
+                            <option value="difficulty-desc">Difficulty (Hard → Easy)</option>
+                            <option value="questions">Questions Available (Larger → Smaller)</option>
+                            <option value="questions-desc">Questions Available (Smaller → Larger)</option>
                         </select>
                     </div>
                     
@@ -181,7 +211,7 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
                                     </td>
                                     <td>
                                         <button 
-                                            onClick={() => handleStartInterview(role.id)}
+                                            onClick={() => handleStartClick(role.id)}
                                             disabled={loading !== null}
                                             className={`action-button ${loading === role.id ? "loading" : ""}`}
                                         >
@@ -194,6 +224,13 @@ export default function RoleSelector({ roles, questionCounts }: RoleSelectorProp
                     </table>
                 </div>
             )}
+
+            <InterviewLengthModal
+                isOpen={modalOpen}
+                onClose={handleCloseModal}
+                onSelectLength={handleSelectLength}
+                availableQuestions={selectedRoleId ? questionCounts[selectedRoleId] || 0 : 0}
+            />
         </div>
     );
 }

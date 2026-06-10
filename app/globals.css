@@ -672,7 +672,7 @@ label {
 /* Interview timer */
 .interview-timer {
     position: fixed;
-    top: 16px;
+    top: 72px;
     right: 16px;
     padding: 10px 14px;
     background: var(--color-white);
@@ -681,6 +681,7 @@ label {
     font-family: 'Courier New', monospace;
     font-size: 1rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    z-index: 50;
 }
 
 .timer-label {
@@ -992,4 +993,108 @@ label {
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* Interview Length Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-content {
+    background: var(--color-white);
+    border-radius: 6px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-title {
+    margin: 0 0 20px;
+    font-size: 1.25rem;
+    color: var(--color-gray-900);
+    font-weight: 600;
+}
+
+.modal-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.modal-option {
+    padding: 14px 20px;
+    background-color: var(--color-blue-600);
+    color: var(--color-white);
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.modal-option:hover:not(:disabled) {
+    background-color: var(--color-blue-500);
+}
+
+.modal-option:active:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
+.modal-option-disabled {
+    background-color: var(--color-gray-300);
+    color: var(--color-gray-500);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.modal-option-disabled:hover {
+    background-color: var(--color-gray-300);
+}
+
+.modal-cancel {
+    padding: 10px 20px;
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-300);
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    font-size: 0.95rem;
+}
+
+.modal-cancel:hover {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-400);
+}
+
+@media (max-width: 640px) {
+    .modal-content {
+        padding: 20px;
+        max-width: 100%;
+    }
+    
+    .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    .modal-option {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+    }
 }

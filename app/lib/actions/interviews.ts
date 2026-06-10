@@ -30,7 +30,7 @@ async function verifySessionOwner(sessionId: string, select = "id") {
 
 // --- Actions ---
 
-export async function startInterview(roleId: string) {
+export async function startInterview(roleId: string, interviewLength: "quick" | "standard" | "deep_dive" = "quick") {
   const { user, supabase } = await getSupabase();
 
   // Fetch role to get the name for backward compatibility
@@ -43,6 +43,13 @@ export async function startInterview(roleId: string) {
   
   if (roleError || !role) throw new Error("Role not found or inactive");
 
+  // Determine number of questions based on interview length
+  const questionCount = {
+    quick: 5,
+    standard: 10,
+    deep_dive: 15,
+  }[interviewLength];
+
   // Create session with both role_id (new) and role (deprecated, for backward compatibility)
   const { data: session, error } = await supabase
     .from("sessions")
@@ -50,6 +57,7 @@ export async function startInterview(roleId: string) {
       id: crypto.randomUUID(), 
       role_id: role.id,
       role: role.name, // Keep for backward compatibility during migration
+      interview_length: interviewLength,
       user_id: user.id, 
       created_at: new Date().toISOString() 
     })
@@ -57,7 +65,7 @@ export async function startInterview(roleId: string) {
     .single();
   if (error || !session) throw new Error("Failed to create session");
 
-  // Pick 5 random questions for this role
+  // Pick random questions for this role based on interview length
   const { data: allQuestions, error: qErr } = await supabase
     .from("questions")
     .select("id")
@@ -65,7 +73,11 @@ export async function startInterview(roleId: string) {
     .limit(100);
   if (qErr || !allQuestions) throw new Error("Failed to fetch questions");
 
-  const picked = allQuestions.sort(() => Math.random() - 0.5).slice(0, 5);
+  if (allQuestions.length < questionCount) {
+    throw new Error(`Not enough questions available. Need ${questionCount}, but only ${allQuestions.length} available.`);
+  }
+
+  const picked = allQuestions.sort(() => Math.random() - 0.5).slice(0, questionCount);
 
   // Link them to the session
   const { error: insertErr } = await supabase
