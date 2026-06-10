@@ -1098,3 +1098,252 @@ label {
         font-size: 0.95rem;
     }
 }
+
+/* Analytics Dashboard */
+.analytics-page h1 {
+    margin: 0 0 24px;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+}
+
+.analytics-section {
+    margin-bottom: 24px;
+}
+
+.analytics-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.analytics-tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 12px;
+    margin-bottom: -1px;
+    font-size: 0.875rem;
+    color: var(--color-gray-500);
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.15s ease;
+}
+
+.analytics-tab:hover {
+    color: var(--color-gray-800);
+}
+
+.analytics-tab--active {
+    color: var(--color-gray-900);
+    border-bottom-color: var(--color-gray-800);
+    font-weight: 600;
+}
+
+.line-chart {
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.line-chart svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.line-chart-axis {
+    stroke: var(--color-gray-300);
+    stroke-width: 1;
+}
+
+.line-chart-grid {
+    stroke: var(--color-gray-100);
+    stroke-width: 1;
+}
+
+.line-chart-line {
+    stroke: var(--color-gray-800);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.line-chart-dot {
+    fill: var(--color-gray-800);
+}
+
+.line-chart-tick {
+    fill: var(--color-gray-500);
+    font-size: 11px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.line-chart-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--color-gray-500);
+    font-size: 0.875rem;
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.insight-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.insight-label {
+    font-size: 0.8rem;
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.insight-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.ranked-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ranked-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-gray-100);
+    font-size: 0.95rem;
+}
+
+.ranked-item:last-child {
+    border-bottom: none;
+}
+
+.ranked-item-name {
+    color: var(--color-gray-900);
+    flex: 1;
+}
+
+.ranked-item-meta,
+.ranked-item-count {
+    color: var(--color-gray-500);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.analytics-empty-text {
+    color: var(--color-gray-500);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Skeleton loaders */
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.skeleton {
+    background: var(--color-gray-200);
+    border-radius: 4px;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton-title {
+    height: 32px;
+    width: 240px;
+    margin-bottom: 24px;
+}
+
+.skeleton-stat-value {
+    height: 28px;
+    width: 80px;
+    margin-bottom: 8px;
+}
+
+.skeleton-stat-label {
+    height: 14px;
+    width: 120px;
+}
+
+.skeleton-section-title {
+    height: 20px;
+    width: 160px;
+    margin-bottom: 16px;
+}
+
+.skeleton-tabs {
+    height: 36px;
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 20px;
+}
+
+.skeleton-chart {
+    height: 240px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.skeleton-insight-label {
+    height: 12px;
+    width: 100px;
+    margin-bottom: 8px;
+}
+
+.skeleton-insight-value {
+    height: 20px;
+    width: 60px;
+}
+
+.skeleton-list-row {
+    height: 20px;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.skeleton-list-row:last-child {
+    margin-bottom: 0;
+}
