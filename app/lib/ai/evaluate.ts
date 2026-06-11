@@ -243,18 +243,28 @@ async function callGemini(
 
     const prompt = buildPrompt(role, pairs, completeness);
     const start = Date.now();
+    const maxAttempts = 3; // Increased from 2
+    const baseDelay = 1000; // 1 second
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             const result = await model.generateContent(prompt);
             console.log(`Gemini evaluation completed in ${Date.now() - start}ms`);
             return result.response.text();
         } catch (err) {
             const status = (err as { status?: number }).status;
-            if (status === 503 && attempt < 2) {
-                console.warn(`Gemini unavailable (503), retrying (attempt ${attempt})...`);
+            const isRetryable = status === 503 || status === 429 || status === 500;
+            
+            if (isRetryable && attempt < maxAttempts) {
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = baseDelay * Math.pow(2, attempt - 1);
+                console.warn(
+                    `Gemini error (${status}), retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})...`
+                );
+                await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
+            
             console.error(`Gemini evaluation failed after ${Date.now() - start}ms:`, err);
             return null;
         }
