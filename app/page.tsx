@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUser } from "./lib/supabase/server";
+import { LandingPage } from "./components/LandingPage";
 
 /**
  * Root route - Authentication gateway
@@ -14,9 +15,6 @@ export default async function RootPage() {
     }
 
     return (
-        <>
-            This is the home page or the landing Page
-            for visitors and logged out users.
-        </>
+        <LandingPage></LandingPage>
     );
 }
