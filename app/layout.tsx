@@ -3,23 +3,21 @@ import "./globals.css";
 import Navigation from "./components/Navigation";
 
 export const metadata: Metadata = {
-  title: "App",
-  description: "App",
+    title: "AceMyInterview",
+    description: "Practice mock interviews, track your progress, and get AI-powered feedback.",
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body>
-        <Navigation />
-        <main className="main-content">
-          {children}
-        </main>
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en">
+            <body>
+                <Navigation />
+                <main className="main-content">{children}</main>
+            </body>
+        </html>
+    );
 }

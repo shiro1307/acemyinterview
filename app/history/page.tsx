@@ -1,15 +1,17 @@
+import Link from "next/link";
 import { getUser } from "../lib/supabase/server";
 import { createClient } from "../lib/supabase/server";
 import HistoryList from "../components/HistoryList";
 import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
+import { getJoinedRoleName, getJoinedScore } from "../lib/supabase/helpers";
 
-// Force dynamic rendering - don't cache this page
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type SessionRow = {
     id: string;
-    role: string; // Deprecated field
+    role: string;
     role_id: string;
     created_at: string;
     status: string;
@@ -17,19 +19,13 @@ type SessionRow = {
     roles?: { name: string }[] | { name: string } | null;
 };
 
-function getScore(feedback: SessionRow["feedback"]): number | null {
-    if (!feedback) return null;
-    if (Array.isArray(feedback)) return feedback[0]?.overall_score ?? null;
-    return feedback.overall_score ?? null;
-}
-
 export default async function HistoryPage() {
     const user = await getUser();
 
     if (!user) {
         return (
-            <div>
-                <h1>Interview History</h1>
+            <div className="analytics-page container">
+                <PageHeader title="Interview History" />
                 <EmptyState
                     title="Please log in"
                     description="You need to be logged in to view your interview history and track your progress over time."
@@ -50,8 +46,8 @@ export default async function HistoryPage() {
 
     if (error) {
         return (
-            <div>
-                <h1>Interview History</h1>
+            <div className="analytics-page container">
+                <PageHeader title="Interview History" />
                 <EmptyState
                     title="Error loading sessions"
                     description={`We encountered an error while loading your interview history: ${error.message}`}
@@ -62,25 +58,17 @@ export default async function HistoryPage() {
         );
     }
 
-    const sessionData = (sessions as SessionRow[] ?? []).map((s) => {
-        // Handle roles - could be an array (from join), a single object, or null
-        const roleName = Array.isArray(s.roles) 
-            ? s.roles[0]?.name 
-            : s.roles?.name;
-        
-        return {
-            id: s.id,
-            role: roleName || s.role, // Prefer new role join, fallback to deprecated field
-            date: new Date(s.created_at).toLocaleDateString(),
-            status: s.status,
-            score: getScore(s.feedback),
-            createdAt: s.created_at,
-        };
-    });
+    const sessionData = (sessions as SessionRow[] ?? []).map((s) => ({
+        id: s.id,
+        role: getJoinedRoleName(s.roles ?? null, s.role),
+        date: new Date(s.created_at).toLocaleDateString(),
+        status: s.status,
+        score: getJoinedScore(s.feedback),
+        createdAt: s.created_at,
+    }));
 
     return (
-        <div>
-            <h1>Interview History</h1>
+        <div className="analytics-page container">
             <HistoryList initialSessions={sessionData} />
         </div>
     );

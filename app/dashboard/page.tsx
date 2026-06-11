@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getUser } from "../lib/supabase/server";
 import { getAnalyticsData } from "../lib/analytics/getAnalyticsData";
 import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
 import StatCards from "../components/analytics/StatCards";
 import TrendSection from "../components/analytics/TrendSection";
 import RolePerformance from "../components/analytics/RolePerformance";
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
     if (error || !data) {
         return (
             <div className="analytics-page container">
-                <h1>Analytics Dashboard</h1>
+                <PageHeader title="Analytics Dashboard" />
                 <EmptyState
                     title="Error loading analytics"
                     description={
@@ -39,7 +40,7 @@ export default async function DashboardPage() {
     if (data.summary.interviewsCompleted === 0) {
         return (
             <div className="analytics-page container">
-                <h1>Analytics Dashboard</h1>
+                <PageHeader title="Analytics Dashboard" />
                 <EmptyState
                     title="Complete your first interview to unlock analytics."
                     description="Finish a mock interview to see your performance metrics, score trends, and improvement insights."
@@ -52,7 +53,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="analytics-page container">
-            <h1>Analytics Dashboard</h1>
+            <PageHeader title="Analytics Dashboard" />
 
             <StatCards summary={data.summary} />
 

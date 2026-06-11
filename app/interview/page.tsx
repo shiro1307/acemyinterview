@@ -28,12 +28,10 @@ export default async function InterviewPage() {
     }
 
     // Get question counts per role
-    const { data: questions, error: questionsError } = await supabase
+    const { data: questions } = await supabase
         .from("questions")
         .select("role_id");
-    
-    console.log("Questions query result:", { questions, questionsError });
-    
+
     // Count questions per role ID
     const questionCounts: Record<string, number> = {};
     if (questions) {
@@ -44,9 +42,6 @@ export default async function InterviewPage() {
             }
         });
     }
-    
-    console.log("Question counts:", questionCounts);
-    console.log("Roles:", roles?.map(r => ({ id: r.id, name: r.name })));
 
     return (
         <div className="container">

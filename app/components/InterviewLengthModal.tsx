@@ -35,8 +35,8 @@ export default function InterviewLengthModal({
     ];
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay modal-overlay-animated" onClick={onClose}>
+            <div className="modal-content modal-content-animated" onClick={(e) => e.stopPropagation()}>
                 <h3 className="modal-title">Select Interview Length</h3>
                 <div className="modal-options">
                     {modes.map((mode) => {

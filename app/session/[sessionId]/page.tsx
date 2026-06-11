@@ -1,6 +1,4 @@
 import { getUser } from "../../lib/supabase/server";
-import { createClient } from "../../lib/supabase/server";
-import { SessionFeedback } from "@/app/types";
 import CompletenessBanner from "@/app/components/CompletenessBanner";
 import SessionSummaryCard from "@/app/components/SessionSummaryCard";
 import FeedbackList from "@/app/components/FeedbackList";
@@ -8,6 +6,8 @@ import ScoreRubric from "@/app/components/ScoreRubric";
 import QuestionReviewCard from "@/app/components/QuestionReviewCard";
 import PrintButton from "@/app/components/PrintButton";
 import EmptyState from "@/app/components/EmptyState";
+import PageHeader from "@/app/components/PageHeader";
+import { getSessionReviewData } from "@/app/lib/session/getSessionReviewData";
 
 interface SessionPageProps {
     params: Promise<{ sessionId: string }>;
@@ -30,16 +30,9 @@ export default async function SessionPage({ params }: SessionPageProps) {
     }
 
     const { sessionId } = await params;
-    const supabase = await createClient();
+    const result = await getSessionReviewData(sessionId, user.id);
 
-    const { data: session, error: sessionError } = await supabase
-        .from("sessions")
-        .select("*, roles(name)")
-        .eq("id", sessionId)
-        .eq("user_id", user.id)
-        .single();
-
-    if (!session || sessionError) {
+    if (result.type === "not_found") {
         return (
             <div className="review-page">
                 <EmptyState
@@ -52,18 +45,12 @@ export default async function SessionPage({ params }: SessionPageProps) {
         );
     }
 
-    const { data: answersData, error: ansError } = await supabase
-        .from("answers")
-        .select("id, question_id, text, created_at")
-        .eq("session_id", sessionId)
-        .order("created_at", { ascending: true });
-
-    if (ansError) {
+    if (result.type === "answers_error") {
         return (
             <div className="review-page">
                 <EmptyState
                     title="Error loading answers"
-                    description={`We encountered an error while loading your interview answers: ${ansError.message}`}
+                    description={`We encountered an error while loading your interview answers: ${result.message}`}
                     actionText="View your interview history"
                     actionHref="/history"
                 />
@@ -71,33 +58,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
         );
     }
 
-    const answerMap = new Map<string, string>();
-    (answersData ?? []).forEach((a) => {
-        answerMap.set(a.question_id, a.text);
-    });
-
-    // Calculate interview duration from first and last answer timestamps
-    let interviewDuration: string | null = null;
-    if (answersData && answersData.length >= 2) {
-        const firstTimestamp = new Date(answersData[0].created_at).getTime();
-        const lastTimestamp = new Date(answersData[answersData.length - 1].created_at).getTime();
-        const durationMs = lastTimestamp - firstTimestamp;
-        
-        const hours = Math.floor(durationMs / 3600000);
-        const minutes = Math.floor((durationMs % 3600000) / 60000);
-        const seconds = Math.floor((durationMs % 60000) / 1000);
-        
-        const pad = (n: number) => n.toString().padStart(2, "0");
-        interviewDuration = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-    }
-
-    const { data: feedbackData, error: fbError } = await supabase
-        .from("feedback")
-        .select("*")
-        .eq("session_id", sessionId)
-        .single();
-
-    if (fbError || !feedbackData) {
+    if (result.type === "no_feedback") {
         return (
             <div className="review-page">
                 <EmptyState
@@ -110,10 +71,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
         );
     }
 
-    const feedback = feedbackData as SessionFeedback;
-    const evalJson = feedback.evaluation_json;
-
-    if (evalJson.version !== 2) {
+    if (result.type === "outdated_format") {
         return (
             <div className="review-page">
                 <EmptyState
@@ -126,28 +84,31 @@ export default async function SessionPage({ params }: SessionPageProps) {
         );
     }
 
-    const date = new Date(feedback.created_at).toLocaleDateString();
-    
-    // Get role name - prefer from join, fallback to deprecated field
-    const roleName = (session.roles as any)?.name || session.role;
+    const { roleName, date, interviewDuration, feedback, answerMap } = result;
+    const evalJson = feedback.evaluation_json;
+    const questionCount = evalJson.questionEvaluations.length;
+
+    const metaItems = [
+        date,
+        ...(interviewDuration ? [`Duration ${interviewDuration}`] : []),
+    ];
 
     return (
         <div className="review-page printable">
+            <PageHeader
+                title={`${roleName} — Interview Review`}
+                backHref="/history"
+                backLabel="Back to history"
+                actions={<PrintButton />}
+            />
 
-            <header className="review-header">
-                <h1>{roleName} — Interview Review</h1>
-                <div className="review-meta">
-                    <p className="review-date">{date}</p>
-                    {interviewDuration && (
-                        <p className="review-duration">
-                            <span>
-                                Actual interview duration: {interviewDuration} (HH:MM:SS)
-                            </span>
-                        </p>
-                    )}
-                </div>
-                <PrintButton />
-            </header>
+            <div className="review-meta-row">
+                {metaItems.map((item) => (
+                    <span key={item} className="review-meta-chip">
+                        {item}
+                    </span>
+                ))}
+            </div>
 
             <CompletenessBanner completeness={evalJson.completeness} />
 
@@ -165,12 +126,14 @@ export default async function SessionPage({ params }: SessionPageProps) {
                 <FeedbackList title="Improvements" items={evalJson.improvements} />
             </div>
 
-            <FeedbackList title="Topics to review" items={evalJson.studyTopics} />
+            <section className="review-section">
+                <FeedbackList title="Topics to review" items={evalJson.studyTopics} />
+            </section>
 
             <ScoreRubric />
 
             <section className="questions-section">
-                <h2 className="section-title">Question breakdown</h2>
+                <h2 className="section-title">Question breakdown ({questionCount})</h2>
                 {evalJson.questionEvaluations.map((evalItem, idx) => (
                     <QuestionReviewCard
                         key={evalItem.questionId}

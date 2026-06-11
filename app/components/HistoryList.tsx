@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { deleteSession } from "../lib/actions/interviews";
 import EmptyState from "./EmptyState";
+import PageHeader from "./PageHeader";
+import ConfirmDialog from "./ConfirmDialog";
 
 type SessionData = {
     id: string;
@@ -17,11 +19,32 @@ type SessionData = {
 
 type SortOrder = "newest" | "oldest";
 
+function getScoreBandClass(score: number | null): string {
+    if (score === null) return "";
+    if (score >= 7) return "history-score-badge--high";
+    if (score >= 5) return "history-score-badge--mid";
+    return "history-score-badge--low";
+}
+
+function formatStatus(status: string): string {
+    if (status === "completed") return "Completed";
+    if (status === "active") return "In progress";
+    if (status === "abandoned") return "Abandoned";
+    return status;
+}
+
+function getStatusClass(status: string): string {
+    if (status === "completed") return "history-status-badge--completed";
+    if (status === "active") return "history-status-badge--active";
+    return "history-status-badge--other";
+}
+
 export default function HistoryList({ initialSessions }: { initialSessions: SessionData[] }) {
     const router = useRouter();
     const [sessions, setSessions] = useState(initialSessions);
     const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [confirmSessionId, setConfirmSessionId] = useState<string | null>(null);
     const [error, setError] = useState<string>("");
 
     const sortedSessions = [...sessions].sort((a, b) => {
@@ -43,48 +66,41 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
     }
 
     const handleDelete = async (sessionId: string) => {
-        if (!window.confirm("Are you sure you want to delete this interview session? This action cannot be undone.")) {
-            return;
-        }
-
         setDeletingId(sessionId);
         setError("");
-        
+
         try {
-            const result = await deleteSession(sessionId);
-            console.log("Delete result:", result);
-            setSessions(sessions.filter(s => s.id !== sessionId));
-            // Refresh the page data from the server to ensure consistency
+            await deleteSession(sessionId);
+            setSessions(sessions.filter((s) => s.id !== sessionId));
+            setConfirmSessionId(null);
             router.refresh();
         } catch (err) {
-            console.error("Failed to delete session:", err);
             setError(err instanceof Error ? err.message : "Failed to delete session");
-            // Don't update local state if deletion failed
         } finally {
             setDeletingId(null);
         }
     };
 
+    const sortControl = (
+        <div className="history-toolbar">
+            <label htmlFor="sort-order" className="history-sort-label">
+                Sort by
+            </label>
+            <select
+                id="sort-order"
+                className="history-sort-select"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+            >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+            </select>
+        </div>
+    );
+
     return (
         <div>
-            <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <label htmlFor="sort-order">Sort by:</label>
-                <select
-                    id="sort-order"
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                    style={{
-                        padding: "0.5rem",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        backgroundColor: "white",
-                        cursor: "pointer"
-                    }}
-                >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                </select>
-            </div>
+            <PageHeader title="Interview History" actions={sortedSessions.length > 0 ? sortControl : undefined} />
 
             {error && <div className="error-message">{error}</div>}
 
@@ -94,42 +110,57 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
                     description="You haven't completed any interviews yet. Start your first mock interview to see your progress here."
                     actionText="Start your first interview"
                     actionHref="/interview"
+                    secondaryAction={{ text: "View dashboard", href: "/dashboard" }}
                 />
             ) : (
                 <ul className="history-list">
                     {sortedSessions.map((session, index) => {
                         const delta = computeDelta(index);
                         const isDeleting = deletingId === session.id;
-                        
+
                         return (
-                            <li key={session.id} className="history-item">
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                                    <div style={{ flex: 1 }}>
-                                        <Link href={`/session/${session.id}`}>
-                                            {session.role} — {session.date}
-                                        </Link>
+                            <li
+                                key={session.id}
+                                className="history-card"
+                                style={{ "--i": index } as React.CSSProperties}
+                            >
+                                <Link href={`/session/${session.id}`} className="history-card-link">
+                                    <div className="history-card-header">
+                                        <h2 className="history-card-role">{session.role}</h2>
                                         {session.score !== null && (
-                                            <span className="history-score">{session.score}/10</span>
-                                        )}
-                                        {delta !== null && delta !== 0 && (
-                                            <span className={`history-delta ${delta > 0 ? "history-delta-positive" : "history-delta-negative"}`}>
-                                                {delta > 0 ? `+${delta}` : delta} vs prior {session.role}
+                                            <span
+                                                className={`history-score-badge ${getScoreBandClass(session.score)}`}
+                                            >
+                                                {session.score}/10
                                             </span>
                                         )}
                                     </div>
+                                    <div className="history-card-meta">
+                                        <span>{session.date}</span>
+                                        <span className="history-meta-separator">·</span>
+                                        <span className={`history-status-badge ${getStatusClass(session.status)}`}>
+                                            {formatStatus(session.status)}
+                                        </span>
+                                    </div>
+                                    {delta !== null && delta !== 0 && (
+                                        <span
+                                            className={`history-delta ${
+                                                delta > 0 ? "history-delta-positive" : "history-delta-negative"
+                                            }`}
+                                        >
+                                            {delta > 0 ? `+${delta}` : delta} vs prior {session.role}
+                                        </span>
+                                    )}
+                                </Link>
+                                <div className="history-card-actions">
+                                    <Link href={`/session/${session.id}`} className="history-review-link">
+                                        Review →
+                                    </Link>
                                     <button
-                                        onClick={() => handleDelete(session.id)}
+                                        type="button"
+                                        className={`history-delete-button ${isDeleting ? "loading" : ""}`}
+                                        onClick={() => setConfirmSessionId(session.id)}
                                         disabled={isDeleting}
-                                        style={{
-                                            padding: "0.5rem 1rem",
-                                            backgroundColor: "#dc3545",
-                                            color: "white",
-                                            border: "none",
-                                            borderRadius: "4px",
-                                            cursor: isDeleting ? "not-allowed" : "pointer",
-                                            opacity: isDeleting ? 0.6 : 1,
-                                            marginLeft: "1rem"
-                                        }}
                                     >
                                         {isDeleting ? "Deleting..." : "Delete"}
                                     </button>
@@ -139,6 +170,16 @@ export default function HistoryList({ initialSessions }: { initialSessions: Sess
                     })}
                 </ul>
             )}
+
+            <ConfirmDialog
+                isOpen={confirmSessionId !== null}
+                title="Delete interview session?"
+                message="This will permanently delete this session and all associated answers and feedback. This action cannot be undone."
+                confirmLabel="Delete session"
+                onConfirm={() => confirmSessionId && handleDelete(confirmSessionId)}
+                onCancel={() => setConfirmSessionId(null)}
+                isLoading={deletingId !== null}
+            />
         </div>
     );
 }

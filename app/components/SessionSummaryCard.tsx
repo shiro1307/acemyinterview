@@ -2,6 +2,12 @@ import { DimensionScores, Verdict } from "@/app/types";
 import { VERDICT_LABELS } from "@/app/lib/feedback/constants";
 import MarkdownRenderer from "@/app/components/MarkdownRenderer";
 
+function getScoreClass(score: number): string {
+    if (score >= 7) return "hero-score--high";
+    if (score >= 5) return "hero-score--mid";
+    return "hero-score--low";
+}
+
 function DimensionBar({ label, score }: { label: string; score: number }) {
     return (
         <div className="dimension-row">
@@ -30,7 +36,10 @@ export default function SessionSummaryCard({
     return (
         <div className="card card-hero">
             <div className="hero-header">
-                <div className="hero-score">{overallScore}<span className="hero-score-max">/10</span></div>
+                <div className={`hero-score ${getScoreClass(overallScore)}`}>
+                    {overallScore}
+                    <span className="hero-score-max">/10</span>
+                </div>
                 <div className="hero-verdict">
                     <span className={`verdict-badge verdict-${verdict}`}>{VERDICT_LABELS[verdict]}</span>
                     <div>

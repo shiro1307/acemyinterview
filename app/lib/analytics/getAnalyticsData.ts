@@ -5,6 +5,7 @@ import {
     parseEvaluationJson,
 } from "./aggregate";
 import { AnalyticsData, RawInterview } from "./types";
+import { getJoinedFeedback, getJoinedRoleName } from "@/app/lib/supabase/helpers";
 
 type SessionRow = {
     id: string;
@@ -16,21 +17,6 @@ type SessionRow = {
         | null;
     roles?: { name: string }[] | { name: string } | null;
 };
-
-function getFeedback(
-    feedback: SessionRow["feedback"]
-): { overall_score: number; evaluation_json: unknown } | null {
-    if (!feedback) return null;
-    if (Array.isArray(feedback)) return feedback[0] ?? null;
-    return feedback;
-}
-
-function getRoleName(session: SessionRow): string {
-    const roleName = Array.isArray(session.roles)
-        ? session.roles[0]?.name
-        : session.roles?.name;
-    return roleName || session.role || "Unknown Role";
-}
 
 export async function getAnalyticsData(
     userId: string
@@ -81,7 +67,7 @@ export async function getAnalyticsData(
     }
 
     const interviews: RawInterview[] = sessionRows.flatMap((session) => {
-        const feedback = getFeedback(session.feedback);
+        const feedback = getJoinedFeedback(session.feedback);
         if (!feedback) return [];
 
         const evaluationJson = parseEvaluationJson(feedback.evaluation_json);
@@ -91,7 +77,7 @@ export async function getAnalyticsData(
             {
                 id: session.id,
                 role: session.role,
-                roleName: getRoleName(session),
+                roleName: getJoinedRoleName(session.roles ?? null, session.role),
                 createdAt: session.created_at,
                 overallScore: feedback.overall_score ?? null,
                 evaluationJson,
